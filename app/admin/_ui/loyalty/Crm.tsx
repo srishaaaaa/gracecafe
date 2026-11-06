@@ -93,7 +93,7 @@ export default function Crm({ d, pd }: { d: LoyaltyState; pd: PeriodData }) {
 
       <label className="block">
         <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-600">WhatsApp message{seg ? ` for “${SEGMENTS.find((x) => x.key === seg)?.label}”` : ""}</span>
-        <textarea className={cx(inputLineCls, "h-20 resize-y py-2.5 leading-relaxed")} value={message} maxLength={600} onChange={(e) => setTpl(e.target.value)} />
+        <textarea className={cx(inputLineCls, "h-[68px] resize-y py-2 text-[13px] leading-snug")} value={message} maxLength={600} onChange={(e) => setTpl(e.target.value)} />
         <span className="text-[12px] text-slate-500">{"{name}"} and {"{shop}"} are filled in for each customer. Only customers who agreed to WhatsApp messages get a Send button.</span>
       </label>
 

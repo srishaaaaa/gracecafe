@@ -16,7 +16,7 @@ function Line({ children }: { children: React.ReactNode }) {
 
 /** A small number box that sits inside a sentence. */
 function NumBox({ value, onChange, step = 1 }: { value: number; onChange: (n: number) => void; step?: number }) {
-  return <input type="number" min={0} step={step} className="h-10 w-24 rounded-xl border border-slate-300 bg-white px-3 text-right text-[14px] font-bold text-slate-900 outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-100" value={Number.isFinite(value) ? value : 0} onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))} />;
+  return <input type="number" min={0} step={step} className="h-9 w-20 rounded-lg border border-slate-300 bg-white px-2.5 text-right text-[13.5px] font-bold text-slate-900 outline-none focus:border-slate-500 focus:ring-4 focus:ring-slate-100" value={Number.isFinite(value) ? value : 0} onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))} />;
 }
 
 /** A worked example the owner can play with. */
@@ -53,7 +53,8 @@ function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
 }
 
 const note = "text-[12.5px] leading-relaxed text-slate-500";
-const small = "h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-right text-[13.5px] text-slate-900 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100";
+const small = "h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-right text-[13.5px] text-slate-900 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100";
+const compact = "h-9 w-28 rounded-lg border border-slate-200 bg-white px-3 text-center text-[13.5px] font-semibold text-slate-900 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100";
 
 export default function SettingsTab({ d }: { d: LoyaltyState }) {
   // the form starts again from the saved settings whenever they change (after Save)
@@ -305,7 +306,7 @@ function Form({ saved }: { saved: LoyaltyConfig }) {
             </span>
           </label>
           <Field label="An unlocked spending reward stays valid for (days)" hint="0 = it never expires">
-            <input type="number" min={0} className={small} value={c.gifts.validityDays} onChange={(e) => set("gifts", { validityDays: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} />
+            <input type="number" min={0} className={compact} value={c.gifts.validityDays} onChange={(e) => set("gifts", { validityDays: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} />
           </Field>
         </div>
       </Card>
@@ -313,9 +314,9 @@ function Form({ saved }: { saved: LoyaltyConfig }) {
       {/* expiry */}
       <Card title="Points expiry">
         <p className={cx(note, "mb-3")}>Leave at 0 if points should never run out. Otherwise points expire this many days after they were earned — the oldest are used first. Customers whose points are about to expire are flagged on their profile.</p>
-        <div className="max-w-sm">
+        <div>
           <Field label="Points expire after (days)" hint="0 = never. Applies to points earned from now on.">
-            <input type="number" min={0} className={small} value={c.expiry.days} onChange={(e) => set("expiry", { days: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} />
+            <input type="number" min={0} className={compact} value={c.expiry.days} onChange={(e) => set("expiry", { days: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} />
           </Field>
         </div>
       </Card>
@@ -323,33 +324,33 @@ function Form({ saved }: { saved: LoyaltyConfig }) {
       {/* customer groups */}
       <Card title="Customer groups (CRM)">
         <p className={cx(note, "mb-3")}>Every loyalty customer is put in a group from their paid bills — shown in the Customer CRM tab. These numbers decide where the lines fall.</p>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-3 xl:grid-cols-5">
           <Field label="“New” for the first (days)">
-            <input type="number" min={1} className={small} value={c.crm.newDays} onChange={(e) => set("crm", { newDays: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
+            <input type="number" min={1} className={compact} value={c.crm.newDays} onChange={(e) => set("crm", { newDays: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
           </Field>
           <Field label="“Regular” from (visits)">
-            <input type="number" min={1} className={small} value={c.crm.regularVisits} onChange={(e) => set("crm", { regularVisits: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
+            <input type="number" min={1} className={compact} value={c.crm.regularVisits} onChange={(e) => set("crm", { regularVisits: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
           </Field>
           <Field label="“Frequent” from (visits)">
-            <input type="number" min={1} className={small} value={c.crm.frequentVisits} onChange={(e) => set("crm", { frequentVisits: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
+            <input type="number" min={1} className={compact} value={c.crm.frequentVisits} onChange={(e) => set("crm", { frequentVisits: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
           </Field>
           <Field label="…counted over the last (days)">
-            <input type="number" min={1} className={small} value={c.crm.frequentDays} onChange={(e) => set("crm", { frequentDays: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
+            <input type="number" min={1} className={compact} value={c.crm.frequentDays} onChange={(e) => set("crm", { frequentDays: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
           </Field>
           <Field label="“High value” from spending (₹)">
-            <input type="number" min={0} className={small} value={c.crm.highValue} onChange={(e) => set("crm", { highValue: Math.max(0, Number(e.target.value) || 0) })} />
+            <input type="number" min={0} className={compact} value={c.crm.highValue} onChange={(e) => set("crm", { highValue: Math.max(0, Number(e.target.value) || 0) })} />
           </Field>
           <Field label="“VIP” from spending (₹)">
-            <input type="number" min={0} className={small} value={c.crm.vipSpend} onChange={(e) => set("crm", { vipSpend: Math.max(0, Number(e.target.value) || 0) })} />
+            <input type="number" min={0} className={compact} value={c.crm.vipSpend} onChange={(e) => set("crm", { vipSpend: Math.max(0, Number(e.target.value) || 0) })} />
           </Field>
           <Field label="“At risk” after (days away)">
-            <input type="number" min={1} className={small} value={c.crm.atRiskDays} onChange={(e) => set("crm", { atRiskDays: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
+            <input type="number" min={1} className={compact} value={c.crm.atRiskDays} onChange={(e) => set("crm", { atRiskDays: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
           </Field>
           <Field label="“Inactive” after (days away)">
-            <input type="number" min={1} className={small} value={c.crm.inactiveDays} onChange={(e) => set("crm", { inactiveDays: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
+            <input type="number" min={1} className={compact} value={c.crm.inactiveDays} onChange={(e) => set("crm", { inactiveDays: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
           </Field>
           <Field label="“Lost” after (days away)">
-            <input type="number" min={1} className={small} value={c.crm.lostDays} onChange={(e) => set("crm", { lostDays: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
+            <input type="number" min={1} className={compact} value={c.crm.lostDays} onChange={(e) => set("crm", { lostDays: Math.max(1, Math.floor(Number(e.target.value) || 1)) })} />
           </Field>
         </div>
         {crmProblems.length > 0 && (
@@ -402,7 +403,7 @@ function Form({ saved }: { saved: LoyaltyConfig }) {
                 <Switch on={c.messages.events[m.key]} onChange={(v) => set("messages", { events: { ...c.messages.events, [m.key]: v } })} label={c.messages.events[m.key] ? "On" : "Off"} />
               </div>
               <textarea
-                className={cx(inputLineCls, "mt-2.5 h-24 resize-y py-2.5 leading-relaxed")}
+                className={cx(inputLineCls, "mt-2.5 h-[68px] resize-y py-2 text-[13px] leading-snug")}
                 value={c.messages.templates[m.key]}
                 maxLength={600}
                 onChange={(e) => set("messages", { templates: { ...c.messages.templates, [m.key]: e.target.value } as Record<MessageKey, string> })}
