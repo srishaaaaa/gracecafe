@@ -39,6 +39,23 @@ const Cherry = ({ logo }: { logo?: string }) =>
     </span>
   );
 
+const Sec = ({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) => (
+  <section className="rounded-2xl border border-slate-100 bg-white p-4">
+    <b className="block text-[13.5px] text-slate-900">{title}</b>
+    {desc && <p className="mt-0.5 text-[12px] leading-snug text-slate-500">{desc}</p>}
+    <div className="mt-3 space-y-3">{children}</div>
+  </section>
+);
+const Toggle = ({ title, desc, on, onChange }: { title: string; desc: string; on: boolean; onChange: (v: boolean) => void }) => (
+  <div className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+    <div className="min-w-0">
+      <b className="block text-[13px] text-slate-900">{title}</b>
+      <p className="mt-0.5 text-[12px] leading-snug text-slate-500">{desc}</p>
+    </div>
+    <Switch on={on} onChange={onChange} label={title} />
+  </div>
+);
+
 function Settings({ onClose }: { onClose: () => void }) {
   const { s, act, toast } = useAdmin();
   const [walkInsOnly, setWalkInsOnly] = useState(s.settings.walkInsOnly);
@@ -105,67 +122,68 @@ function Settings({ onClose }: { onClose: () => void }) {
     if (r.ok) toast({ kind: "ok", title: "Shop details saved." });
   };
 
+  const two = "grid gap-3 sm:grid-cols-2";
+
   return (
-    <Modal open onClose={onClose} title="Settings">
+    <Modal
+      open
+      onClose={onClose}
+      wide
+      title="Settings"
+      footer={
+        <>
+          <Btn kind="plain" onClick={onClose}>Close</Btn>
+          <Btn kind="red" onClick={saveDetails} disabled={saving}>{saving ? "Saving…" : "Save shop details"}</Btn>
+        </>
+      }
+    >
       <div className="space-y-4">
-        <div className="space-y-3 border-b border-slate-100 pb-4">
-          <b className="block text-[13.5px] text-slate-900">Shop details</b>
-          <p className="text-[12.5px] text-slate-500">Shown on the menu page, receipts and invoices.</p>
-          <Field label="Shop name"><input className={inputCls} value={form.shopName} maxLength={60} onChange={set("shopName")} /></Field>
-          <Field label="Owner's name"><input className={inputCls} value={form.ownerName} maxLength={80} onChange={set("ownerName")} /></Field>
-          <Field label="Location"><input className={inputCls} value={form.location} maxLength={120} onChange={set("location")} /></Field>
-          <Field label="Address" hint="One line per row"><textarea className={cx(inputCls, "h-24 py-2")} value={form.address} onChange={set("address")} /></Field>
-          <Field label="WhatsApp number"><input className={inputCls} inputMode="tel" value={form.whatsapp1} maxLength={30} onChange={set("whatsapp1")} placeholder="10-digit number" /></Field>
-          <Field label="Customer service number"><input className={inputCls} inputMode="tel" value={form.customerCare} maxLength={30} onChange={set("customerCare")} /></Field>
-          <Field label="Email"><input className={inputCls} type="email" value={form.email} maxLength={120} onChange={set("email")} /></Field>
+        <Sec title="Shop details" desc="Shown on the menu page, receipts and invoices.">
+          <div className={two}>
+            <Field label="Shop name"><input className={inputCls} value={form.shopName} maxLength={60} onChange={set("shopName")} /></Field>
+            <Field label="Owner's name"><input className={inputCls} value={form.ownerName} maxLength={80} onChange={set("ownerName")} /></Field>
+            <Field label="Location"><input className={inputCls} value={form.location} maxLength={120} onChange={set("location")} /></Field>
+            <Field label="Email"><input className={inputCls} type="email" value={form.email} maxLength={120} onChange={set("email")} /></Field>
+            <Field label="WhatsApp number"><input className={inputCls} inputMode="tel" value={form.whatsapp1} maxLength={30} onChange={set("whatsapp1")} placeholder="10-digit number" /></Field>
+            <Field label="Customer service number"><input className={inputCls} inputMode="tel" value={form.customerCare} maxLength={30} onChange={set("customerCare")} /></Field>
+          </div>
+          <Field label="Address" hint="One line per row"><textarea className={cx(inputCls, "h-20 resize-none py-2 leading-snug")} value={form.address} onChange={set("address")} /></Field>
           <Field label="Google Maps link"><input className={inputCls} value={form.mapsUrl} maxLength={500} onChange={set("mapsUrl")} placeholder="https://maps.app.goo.gl/…" /></Field>
-          <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
-            <b className="block text-[13px] text-slate-900">Guests paying by UPI</b>
-            <p className="text-[12px] text-slate-500">Guests see a UPI QR (with their exact amount) on their phone tab. It is your own UPI ID, so there are no fees — but the app can&apos;t see the payment, so staff check their UPI app and confirm. Leave the UPI ID blank to switch it off.</p>
+        </Sec>
+
+        <Sec title="Logo" desc="Upload a PNG or JPG, or paste an image link. Blank uses the built-in icon.">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl border border-slate-200 bg-slate-950">
+              {form.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={form.logoUrl} alt="Logo preview" className="h-full w-full object-contain p-1" />
+              ) : (
+                <span className="text-[10px] text-slate-400">none</span>
+              )}
+            </span>
+            <label className="inline-flex h-10 cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-50">
+              Upload PNG / JPG
+              <input type="file" accept="image/png,image/jpeg" className="sr-only" onChange={pickLogo} />
+            </label>
+            {form.logoUrl && <Btn kind="plain" onClick={() => setForm({ ...form, logoUrl: "" })}>Remove</Btn>}
+          </div>
+          <input className={inputCls} value={form.logoUrl.startsWith("data:") ? "" : form.logoUrl} maxLength={500} onChange={set("logoUrl")} placeholder={form.logoUrl.startsWith("data:") ? "Uploaded image in use" : "…or paste a link: https://…"} />
+        </Sec>
+
+        <Sec title="Guests paying by UPI" desc="Guests see a UPI QR with their exact amount on their phone tab. It's your own UPI ID, so there are no fees — but staff confirm the payment in their UPI app. Leave the UPI ID blank to switch it off.">
+          <div className={two}>
             <Field label="Shop UPI ID" hint="Like name@bank"><input className={inputCls} value={form.upiId} maxLength={80} onChange={set("upiId")} placeholder="yourshop@okicici" autoCapitalize="none" /></Field>
             <Field label="Name shown in the UPI app" hint="Blank uses the shop name"><input className={inputCls} value={form.upiName} maxLength={60} onChange={set("upiName")} /></Field>
-            <Field label="GPay / PhonePe number (optional)" hint="Shown next to the UPI ID so customers can also pay by typing this number in GPay. 10 digits."><input className={inputCls} inputMode="numeric" value={form.upiPhone} maxLength={14} onChange={set("upiPhone")} placeholder="98765 43210" /></Field>
-            <Field label="Change the QR every (minutes)" hint="A fresh QR replaces the old one on the guest's screen"><input className={inputCls} type="number" min={1} max={30} inputMode="numeric" value={form.upiQrMinutes} onChange={set("upiQrMinutes")} /></Field>
+            <Field label="GPay / PhonePe number (optional)" hint="10 digits, shown beside the UPI ID"><input className={inputCls} inputMode="numeric" value={form.upiPhone} maxLength={14} onChange={set("upiPhone")} placeholder="98765 43210" /></Field>
+            <Field label="Change the QR every (minutes)" hint="A fresh QR replaces the old one"><input className={inputCls} type="number" min={1} max={30} inputMode="numeric" value={form.upiQrMinutes} onChange={set("upiQrMinutes")} /></Field>
           </div>
-          <Field label="Logo" hint="Upload a PNG or JPG, or paste an image link. Blank uses the built-in icon.">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                {form.logoUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={form.logoUrl} alt="Logo preview" className="h-12 w-auto max-w-[110px] rounded-lg border border-slate-200 bg-white object-contain p-1" />
-                )}
-                <label className="inline-flex h-10 cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-50">
-                  Upload PNG / JPG
-                  <input type="file" accept="image/png,image/jpeg" className="sr-only" onChange={pickLogo} />
-                </label>
-                {form.logoUrl && <Btn kind="plain" onClick={() => setForm({ ...form, logoUrl: "" })}>Remove</Btn>}
-              </div>
-              <input className={inputCls} value={form.logoUrl.startsWith("data:") ? "" : form.logoUrl} maxLength={500} onChange={set("logoUrl")} placeholder={form.logoUrl.startsWith("data:") ? "Uploaded image in use" : "…or paste a link: https://…"} />
-            </div>
-          </Field>
-          <Btn kind="red" onClick={saveDetails} disabled={saving}>{saving ? "Saving…" : "Save shop details"}</Btn>
-        </div>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <b className="block text-[13.5px] text-slate-900">Customer ordering</b>
-            <p className="mt-0.5 text-[12.5px] text-slate-500">On: guests can scan, order and open a tab from their phone. Off: the site shows the menu card only — no cart, no tabs, no kitchen tickets.</p>
-          </div>
-          <Switch on={orderingEnabled} onChange={toggleOrdering} label="Customer ordering" />
-        </div>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <b className="block text-[13.5px] text-slate-900">Walk-ins only</b>
-            <p className="mt-0.5 text-[12.5px] text-slate-500">Hide the customer-tab flow in POS Billing. Every bill is a counter walk-in.</p>
-          </div>
-          <Switch on={walkInsOnly} onChange={toggleWalkIns} label="Walk-ins only" />
-        </div>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <b className="block text-[13.5px] text-slate-900">Kitchen queue (KOT)</b>
-            <p className="mt-0.5 text-[12.5px] text-slate-500">On-screen kitchen tickets for the chef. Turn off if the kitchen doesn&apos;t need a queue.</p>
-          </div>
-          <Switch on={kotEnabled} onChange={toggleKot} label="Kitchen queue" />
-        </div>
+        </Sec>
+
+        <section className="divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-white p-4">
+          <Toggle title="Customer ordering" desc="On: guests can scan, order and open a tab from their phone. Off: the site shows the menu card only." on={orderingEnabled} onChange={toggleOrdering} />
+          <Toggle title="Walk-ins only" desc="Hide the customer-tab flow in POS Billing. Every bill is a counter walk-in." on={walkInsOnly} onChange={toggleWalkIns} />
+          <Toggle title="Kitchen queue (KOT)" desc="On-screen kitchen tickets for the chef. Turn off if the kitchen doesn't need a queue." on={kotEnabled} onChange={toggleKot} />
+        </section>
       </div>
     </Modal>
   );

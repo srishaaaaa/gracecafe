@@ -157,7 +157,7 @@ html:has(.adm) {
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
-/* the 8:2 logo is dark green, so on the dark sidebar it sits on a light tile */
+/* the Grace Cafe logo is black and gold, so it sits straight on the dark sidebar */
 .adm-logo-plain {
   display: block;
   flex-shrink: 0;
@@ -173,7 +173,7 @@ html:has(.adm) {
   flex-shrink: 0;
   padding: 4px 8px;
   border-radius: 10px;
-  background: #f4f7e8;
+  background: transparent;
   box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.35);
 }
 .adm-logo img {
@@ -184,25 +184,25 @@ html:has(.adm) {
   object-fit: contain;
 }
 .adm-side__brand small {
-  color: rgba(243, 244, 225, 0.42);
+  color: rgba(246, 241, 226, 0.42);
 }
 .adm-side hr {
   border: 0;
   border-top: 1px solid var(--line-dark);
 }
 .adm-link {
-  color: rgba(243, 244, 225, 0.72);
+  color: rgba(246, 241, 226, 0.72);
   transition: background-color 0.25s, color 0.25s, transform 0.25s;
 }
 .adm-link:hover {
   transform: translateX(2px);
-  background: rgba(243, 244, 225, 0.08);
+  background: rgba(246, 241, 226, 0.08);
   color: var(--cream);
 }
 .adm-link.is-on {
   background: var(--cherry);
   color: #fff;
-  box-shadow: 0 8px 16px -10px rgba(107, 117, 80, 0.9);
+  box-shadow: 0 8px 16px -10px rgba(154, 116, 32, 0.9);
 }
 .adm-link.is-on:hover {
   background: var(--cherry);
@@ -300,11 +300,11 @@ html:has(.adm) {
 }
 .adm .bg-white.rounded-xl,
 .adm .bg-white.rounded-2xl {
-  box-shadow: 0 1px 0 rgba(31, 34, 24, 0.04), 0 10px 24px -18px rgba(31, 34, 24, 0.35);
+  box-shadow: 0 1px 0 rgba(20, 19, 16, 0.04), 0 10px 24px -18px rgba(20, 19, 16, 0.35);
 }
 .adm button.bg-red-600,
 .adm a.bg-red-600 {
-  box-shadow: 0 8px 16px -10px rgba(107, 117, 80, 0.9);
+  box-shadow: 0 8px 16px -10px rgba(154, 116, 32, 0.9);
 }
 .adm button.bg-red-600:not(:disabled):hover {
   transform: translateY(-1px);

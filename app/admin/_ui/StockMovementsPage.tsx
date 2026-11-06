@@ -17,7 +17,7 @@ const TYPE: Record<StockMoveType, [string, BadgeTone]> = {
   cancelled_order: ["Order cancelled", "sky"],
   void_bill: ["Bill voided", "sky"],
   adjustment: ["Adjustment", "amber"],
-  gift: ["FREE GIFT / LOYALTY REWARD", "green"],
+  gift: ["Free gift", "green"],
 };
 const th = "px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-500 whitespace-nowrap";
 const td = "px-4 py-3 text-[13px]";
@@ -140,7 +140,7 @@ export default function StockMovementsPage() {
         <Kpi label="Adjustments" value={`${st.adjusted > 0 ? "+" : ""}${st.adjusted}`} hint="Manual corrections" icon="sliders" tone="amber" />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_340px]">
         <Card title="Timeline">
           {!rows.length ? (
             <Empty icon="box" title={loading ? "Loading…" : needle || type !== "all" || pid !== "all" || period !== "all" ? "No movements match" : "No stock movements yet"}>
@@ -148,8 +148,47 @@ export default function StockMovementsPage() {
             </Empty>
           ) : (
             <>
-              <div className="overflow-x-auto adm-scroll">
-                <table className="w-full min-w-[680px]">
+              {/* phones and tablets: one card per movement */}
+              <ul className="space-y-3 xl:hidden">
+                {rows.map((m) => (
+                  <li key={m.id} className="rounded-2xl border border-slate-100 bg-white p-3.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <b className="block break-words text-[14px] leading-snug text-slate-900">{m.productName}</b>
+                        <span className="mt-0.5 block text-[11.5px] text-slate-500">{fmtDateTime(m.createdAt)}</span>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <b className={cx("block text-[18px] font-extrabold leading-none", m.qty > 0 ? "text-emerald-600" : "text-red-600")}>
+                          {m.qty > 0 ? "+" : ""}
+                          {m.qty}
+                        </b>
+                        <span className="mt-1 block text-[11px] text-slate-500">balance {m.balanceAfter}</span>
+                      </div>
+                    </div>
+                    <div className="mt-2.5">
+                      <Badge tone={TYPE[m.type][1]}>{TYPE[m.type][0]}</Badge>
+                    </div>
+                    {(m.note || m.ref) && (
+                      <div className="mt-2.5 rounded-xl bg-slate-50 px-3 py-2">
+                        {m.note && <p className="break-words text-[12.5px] leading-snug text-slate-600">{m.note}</p>}
+                        {m.ref && <p className="mt-1 break-all text-[11px] text-slate-400">{m.ref}</p>}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+
+              {/* desktops: table with a proper Reason column */}
+              <div className="adm-scroll hidden overflow-x-auto xl:block">
+                <table className="w-full min-w-[860px] table-fixed">
+                  <colgroup>
+                    <col className="w-[150px]" />
+                    <col className="w-[170px]" />
+                    <col className="w-[190px]" />
+                    <col className="w-[80px]" />
+                    <col className="w-[84px]" />
+                    <col />
+                  </colgroup>
                   <thead className="bg-slate-50">
                     <tr>
                       <th className={th}>When</th>
@@ -162,9 +201,9 @@ export default function StockMovementsPage() {
                   </thead>
                   <tbody>
                     {rows.map((m) => (
-                      <tr key={m.id} className="border-b border-slate-100 last:border-0">
-                        <td className={cx(td, "whitespace-nowrap text-slate-600")}>{fmtDateTime(m.createdAt)}</td>
-                        <td className={cx(td, "font-semibold text-slate-900")}>{m.productName}</td>
+                      <tr key={m.id} className="border-b border-slate-100 align-top last:border-0">
+                        <td className={cx(td, "text-slate-600")}>{fmtDateTime(m.createdAt)}</td>
+                        <td className={cx(td, "break-words font-semibold text-slate-900")}>{m.productName}</td>
                         <td className={td}>
                           <Badge tone={TYPE[m.type][1]}>{TYPE[m.type][0]}</Badge>
                         </td>
@@ -173,9 +212,9 @@ export default function StockMovementsPage() {
                           {m.qty}
                         </td>
                         <td className={cx(td, "text-right font-semibold text-slate-700")}>{m.balanceAfter}</td>
-                        <td className={cx(td, "text-slate-500")}>
-                          {m.note}
-                          {m.ref && <span className="block text-[11.5px] text-slate-400">{m.ref}</span>}
+                        <td className={cx(td, "break-words leading-snug text-slate-600")}>
+                          {m.note || <span className="text-slate-300">—</span>}
+                          {m.ref && <span className="mt-1 block break-all text-[11.5px] text-slate-400">{m.ref}</span>}
                         </td>
                       </tr>
                     ))}
