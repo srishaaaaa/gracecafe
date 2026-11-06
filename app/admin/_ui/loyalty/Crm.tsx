@@ -72,7 +72,7 @@ export default function Crm({ d, pd }: { d: LoyaltyState; pd: PeriodData }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 2xl:grid-cols-8">
         {SEGMENTS.map((x) => (
           <button key={x.key} type="button" onClick={() => (setSeg(seg === x.key ? "" : x.key), setTpl(null))} className={cx("rounded-2xl border p-3 text-left transition", seg === x.key ? "border-red-600 bg-red-50" : "border-slate-100 bg-white hover:bg-slate-50")}>
             <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-600">{x.label}</span>
@@ -103,36 +103,88 @@ export default function Crm({ d, pd }: { d: LoyaltyState; pd: PeriodData }) {
         </Empty>
       ) : (
         <>
-          <div className={tableWrap}>
-            <table className="w-full min-w-[820px]">
+          {/* phones: one card per customer */}
+          <ul className="space-y-3 md:hidden">
+            {pg.rows.map(({ c, st, seg: sg }) => {
+              const meta = SEGMENTS.find((x) => x.key === sg);
+              return (
+                <li key={c.id} className="rounded-2xl border border-slate-100 bg-white p-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <b className="block truncate text-[14px] text-slate-900">{c.name}</b>
+                      <span className="block text-[12px] text-slate-500">{c.phone}</span>
+                    </div>
+                    {meta ? <Badge tone={meta.tone}>{meta.label}</Badge> : <span className="text-[11.5px] text-slate-400">No bills yet</span>}
+                  </div>
+                  <dl className="mt-3 grid grid-cols-4 gap-2 text-center">
+                    {[
+                      ["Visits", st.visits],
+                      ["Spent", rupee(st.spent)],
+                      ["Avg bill", rupee(st.aov)],
+                      ["Points", c.available],
+                    ].map(([k, v]) => (
+                      <div key={k as string} className="rounded-lg bg-slate-50 px-1 py-1.5">
+                        <dt className="text-[9.5px] font-bold uppercase tracking-wider text-slate-500">{k}</dt>
+                        <dd className="adm-num mt-0.5 text-[13px] font-bold text-slate-900">{v}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <span className="text-[12px] text-slate-500">Last visit: {st.last ? fmtDate(st.last) : "—"}</span>
+                    {c.consent && c.status === "active" ? (
+                      <a href={waLink(c.whatsapp || c.phone, text(c.name))} target="_blank" rel="noopener noreferrer" className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#22c55e] px-3 text-[12px] font-extrabold uppercase tracking-wide text-white hover:bg-[#16a34a]">
+                        <WaIcon size={13} /> Send
+                      </a>
+                    ) : (
+                      <span className="text-[11.5px] text-slate-400">{c.status !== "active" ? "Deactivated" : "No consent"}</span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* tablets and desktops: a fixed-column table, so every header sits over its column */}
+          <div className={cx(tableWrap, "hidden md:block")}>
+            <table className="w-full min-w-[860px] table-fixed">
+              <colgroup>
+                <col className="w-[22%]" />
+                <col className="w-[14%]" />
+                <col className="w-[8%]" />
+                <col className="w-[12%]" />
+                <col className="w-[11%]" />
+                <col className="w-[12%]" />
+                <col className="w-[8%]" />
+                <col className="w-[13%]" />
+              </colgroup>
               <thead className="bg-slate-50">
                 <tr>
-                  <th className={th}>Customer</th>
+                  <th className={cx(th, "px-4")}>Customer</th>
                   <th className={th}>Group</th>
                   <th className={cx(th, "text-right")}>Visits</th>
                   <th className={cx(th, "text-right")}>Spent</th>
                   <th className={cx(th, "text-right")}>Avg bill</th>
-                  <th className={th}>Last visit</th>
+                  <th className={cx(th, "pl-6")}>Last visit</th>
                   <th className={cx(th, "text-right")}>Points</th>
-                  <th className={th} />
+                  <th className={cx(th, "pr-4 text-right")}>WhatsApp</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {pg.rows.map(({ c, st, seg: sg }) => {
                   const meta = SEGMENTS.find((x) => x.key === sg);
                   return (
-                    <tr key={c.id}>
-                      <td className={td}>
-                        <b className="text-slate-900">{c.name}</b>
-                        <span className="block text-[11.5px] text-slate-500">{c.phone}</span>
+                    <tr key={c.id} className="align-middle">
+                      <td className={cx(td, "px-4")}>
+                        <b className="block truncate text-slate-900">{c.name}</b>
+                        <span className="block truncate text-[11.5px] text-slate-500">{c.phone}</span>
                       </td>
-                      <td className={td}>{meta ? <Badge tone={meta.tone}>{meta.label}</Badge> : <span className="text-slate-400">No bills yet</span>}</td>
+                      <td className={td}>{meta ? <Badge tone={meta.tone}>{meta.label}</Badge> : <span className="text-[12px] text-slate-400">No bills yet</span>}</td>
                       <td className={cx(td, "adm-num text-right")}>{st.visits}</td>
                       <td className={cx(td, "adm-num text-right")}>{rupee(st.spent)}</td>
                       <td className={cx(td, "adm-num text-right")}>{rupee(st.aov)}</td>
-                      <td className={td}>{st.last ? fmtDate(st.last) : "—"}</td>
+                      <td className={cx(td, "whitespace-nowrap pl-6")}>{st.last ? fmtDate(st.last) : "—"}</td>
                       <td className={cx(td, "adm-num text-right font-bold")}>{c.available}</td>
-                      <td className={cx(td, "text-right")}>
+                      <td className={cx(td, "pr-4 text-right")}>
                         {c.consent && c.status === "active" ? (
                           <a href={waLink(c.whatsapp || c.phone, text(c.name))} target="_blank" rel="noopener noreferrer" className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#22c55e] px-3 text-[12px] font-extrabold uppercase tracking-wide text-white hover:bg-[#16a34a]">
                             <WaIcon size={13} /> Send

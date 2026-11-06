@@ -32,7 +32,7 @@ function TryIt({ title, children }: { title: string; children: React.ReactNode }
 /** A yes/no rule: the switch, what it is about, and in words what it does right now. */
 function Rule({ on, onChange, title }: { on: boolean; onChange: (v: boolean) => void; title: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2">
+    <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-1.5">
       <span className="text-[13.5px] text-slate-800">{title}</span>
       <span className="inline-flex items-center gap-2.5">
         <b className={cx("text-[12.5px]", on ? "text-emerald-700" : "text-red-600")}>{on ? "Points allowed" : "Points NOT allowed"}</b>
@@ -267,7 +267,7 @@ function Form({ saved }: { saved: LoyaltyConfig }) {
         <div className="mt-4 rounded-xl border border-slate-100 p-3.5">
           <b className="text-[13px] text-slate-900">Can points be used on a bill that also has…</b>
           <p className={cx(note, "mb-2")}>Switch off to stop customers combining points with another saving. If a bill has it, the points are not applied and Billing tells the cashier why.</p>
-          <div className="space-y-2.5">
+          <div className="max-w-xl space-y-2">
             <Rule on={c.redeem.withCoupon} onChange={(v) => set("redeem", { withCoupon: v })} title="a coupon discount" />
             <Rule on={c.redeem.withManual} onChange={(v) => set("redeem", { withManual: v })} title="a manual discount typed at billing" />
             <Rule on={c.redeem.withReward} onChange={(v) => set("redeem", { withReward: v })} title="a free-gift reward being claimed" />
@@ -364,7 +364,7 @@ function Form({ saved }: { saved: LoyaltyConfig }) {
 
       {/* billing and receipts */}
       <Card title="Billing &amp; receipts">
-        <div className="space-y-2.5">
+        <div className="max-w-xl space-y-2">
           <label className="flex items-start gap-2.5 text-[13px] text-slate-700">
             <input type="checkbox" className="mt-0.5" checked={c.display.receiptSummary} onChange={(e) => set("display", { receiptSummary: e.target.checked })} />
             <span>
@@ -431,9 +431,9 @@ function ItemPicker({ products, picked, onChange, none }: { products: { id: stri
   const name = (id: string) => products.find((p) => p.id === id)?.name ?? "(removed item)";
   return (
     <div className="space-y-2">
-      <button type="button" onClick={() => setOpen(true)} className={cx(inputLineCls, "flex items-center justify-between text-left text-slate-500")} aria-label="Add an item">
+      <button type="button" onClick={() => setOpen(true)} className={cx(inputLineCls, "flex h-9 max-w-md items-center justify-between gap-3 text-left text-slate-500")} aria-label="Add an item">
         Add an item…
-        <span className="text-[12px] text-slate-400">choose a category, then the item</span>
+        <span className="hidden text-[12px] text-slate-400 sm:inline">category, then item</span>
       </button>
       <div className="flex flex-wrap items-center gap-2">
         {picked.map((id) => (
