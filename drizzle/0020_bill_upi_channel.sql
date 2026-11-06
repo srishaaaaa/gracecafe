@@ -1,0 +1,1 @@
+ALTER TABLE "bills" ADD COLUMN IF NOT EXISTS "upi_channel" text DEFAULT '' NOT NULL;

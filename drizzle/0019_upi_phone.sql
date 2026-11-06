@@ -1,0 +1,1 @@
+ALTER TABLE "settings" ADD COLUMN IF NOT EXISTS "upi_phone" text DEFAULT '' NOT NULL;

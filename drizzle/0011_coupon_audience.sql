@@ -1,0 +1,1 @@
+ALTER TABLE "coupons" ADD COLUMN IF NOT EXISTS "audience" text DEFAULT 'all' NOT NULL;
