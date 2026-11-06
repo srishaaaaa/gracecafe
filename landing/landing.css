@@ -2887,3 +2887,94 @@ a:focus-visible .roll > span {
     display: none;
   }
 }
+
+/* ==========================================================================
+   GRACE CAFE — black & gold design layer (overrides the earlier rules)
+   ========================================================================== */
+:root {
+  --gold: #d4af37;
+  --gold-lite: #f1d77a;
+  --gold-deep: #9a7420;
+  --gold-grad: linear-gradient(135deg, #f6e08e 0%, #d4af37 45%, #9a7420 100%);
+}
+body { background: #0b0b0a; }
+
+/* headings: classic Cinzel serif, gold on the emphasised word */
+.h-xl, .foot__lead, .cover__after, .receipt__head b, .brand__name em {
+  font-family: var(--font-brand), var(--display);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  font-variation-settings: normal;
+}
+.h-xl { font-size: clamp(38px, 5.6vw, 88px); line-height: 1.04; }
+.h-xl em, .foot__lead em, .cover__after em {
+  font-style: normal;
+  font-weight: 700;
+  background: var(--gold-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.kicker { color: var(--gold); letter-spacing: 0.3em; }
+
+/* every section sits on black; thin gold rules */
+.sec, .menu, .story, .visit, .foot, .gal {
+  --bg: #0b0b0a;
+  --accent: var(--gold);
+  background-color: #0b0b0a;
+  color: var(--cream);
+}
+.sec + .sec, .ribbons, .foot { border-top: 1px solid rgba(212, 175, 55, 0.22); }
+.lede, .mi__note { color: rgba(246, 241, 226, 0.7); }
+.scallop::before, .scallop::after { display: none; }
+
+/* hero: one calm, centred screen instead of a long pinned scroll */
+.cover {
+  height: auto;
+  min-height: 100svh;
+  background: radial-gradient(70% 60% at 50% 42%, #1d1a12 0%, #0b0b0a 70%);
+}
+.cover__pin { position: relative; height: auto; min-height: 100svh; padding: 120px var(--gutter) 80px; }
+.cover__pin img { filter: drop-shadow(0 20px 60px rgba(212, 175, 55, 0.28)); }
+.cover__after { font-size: clamp(26px, 3.4vw, 44px); color: var(--cream); opacity: 1; letter-spacing: 0.12em; text-transform: uppercase; }
+
+/* nav + buttons */
+.nav.is-solid { background: rgba(11, 11, 10, 0.92); box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.25); }
+.brand__name small { color: var(--gold); letter-spacing: 0.2em; }
+.btn--cherry { --bg: var(--gold); --fg: #0b0b0a; --fill: var(--gold-lite); box-shadow: 0 14px 34px -14px rgba(212, 175, 55, 0.7); }
+.btn--cream { --bg: transparent; --fg: var(--gold-lite); --fill: var(--gold); box-shadow: inset 0 0 0 1.5px var(--gold); }
+.btn--cream:hover { --fg: #0b0b0a; }
+
+/* menu list */
+.mindex ol { border-bottom: 1px solid rgba(212, 175, 55, 0.25); }
+.mi { color: var(--cream); border-top: 1px solid rgba(212, 175, 55, 0.25); }
+.mi__n { color: var(--gold); }
+.mi.is-on .mi__t span, .mi:hover .mi__t span { color: var(--gold-lite); }
+
+/* ribbons, gallery, receipt, footer */
+.ribbon { background: var(--gold); color: #0b0b0a; }
+.ribbon--b { background: #14120d; color: var(--gold); }
+.gal__img { box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.35); }
+.gal__end b, .gal__end svg { color: var(--gold); }
+.receipt { background: #14120d; color: var(--cream); box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.35), 0 30px 60px -30px #000; }
+.receipt a, .receipt__head b { color: var(--gold-lite); }
+.receipt__rule { border-color: rgba(212, 175, 55, 0.35); }
+.foot a:hover, .mmenu a:hover { color: var(--gold-lite); }
+.foot__word { color: transparent; -webkit-text-stroke: 1px rgba(212, 175, 55, 0.4); font-family: var(--font-brand), var(--display); }
+.fab { background: var(--gold); color: #0b0b0a; }
+.totop svg circle { stroke: var(--gold); }
+
+.cover__pin {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px !important;
+}
+.cover__pin > * { margin: 0; }
+
+.cover { min-height: min(100svh, 940px); }
+.cover__pin { min-height: min(100svh, 940px) !important; }
+.cover__after { position: static !important; translate: none !important; opacity: 1 !important; }
+.cover__pin .visit__cta { margin-top: 8px; }
+.cover__pin .barcode { margin-top: 10px; }

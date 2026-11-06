@@ -57,19 +57,19 @@ const MENU: (P | null)[] = [
   ["Americano", "Hot Coffee", 90, null, "1447933601403-0c6688de566e", "Espresso lengthened with hot water. Clean and bold.", true],
   ["Cappuccino", "Hot Coffee", 110, null, "1509042239860-f550ce710b93", "Espresso, steamed milk and a thick velvety foam.", true, ["bestseller"]],
   ["Café Latte", "Hot Coffee", 120, null, "1514432324607-a09d9b4aefdd", "Smooth steamed milk over espresso, finished with latte art.", true, ["bestseller"]],
-  ["Café Mocha", "Hot Coffee", 140, null, "1495474472287-4d71bcdd2085", "Espresso, chocolate and steamed milk, topped with cream.", true],
-  ["Filter Coffee", "Hot Coffee", 50, null, "1447933601403-0c6688de566e", "Traditional South Indian decoction coffee, frothy and strong.", true, ["bestseller"]],
-  ["Hot Chocolate", "Hot Coffee", 130, null, "1509042239860-f550ce710b93", "Rich, thick drinking chocolate. Comfort in a cup.", true],
+  ["Café Mocha", "Hot Coffee", 140, null, "1572442388796-11668a67e53d", "Espresso, chocolate and steamed milk, topped with cream.", true],
+  ["Filter Coffee", "Hot Coffee", 50, null, "1485808191679-5f86510681a2", "Traditional South Indian decoction coffee, frothy and strong.", true, ["bestseller"]],
+  ["Hot Chocolate", "Hot Coffee", 130, null, "1542990253-0d0f5be5f0ed", "Rich, thick drinking chocolate. Comfort in a cup.", true],
 
-  ["Cold Coffee", "Cold Coffee", 110, null, "1461023058943-07fcbe16d735", "Chilled coffee blended with milk and ice cream.", true, ["bestseller"]],
-  ["Caramel Frappe", "Cold Coffee", 150, null, "1461023058943-07fcbe16d735", "Blended coffee with caramel, whipped cream and a drizzle.", true],
-  ["Mocha Frappe", "Cold Coffee", 160, null, "1461023058943-07fcbe16d735", "Coffee and chocolate blended thick and cold.", true, ["new"]],
-  ["Cold Brew", "Cold Coffee", 130, null, "1461023058943-07fcbe16d735", "Slow-steeped coffee served over ice. Smooth and low on bitterness.", true, ["new"]],
+  ["Cold Coffee", "Cold Coffee", 110, null, "1517701604599-bb29b565090c", "Chilled coffee blended with milk and ice cream.", true, ["bestseller"]],
+  ["Caramel Frappe", "Cold Coffee", 150, null, "1578314675249-a6910f80cc4e", "Blended coffee with caramel, whipped cream and a drizzle.", true],
+  ["Mocha Frappe", "Cold Coffee", 160, null, "1558857563-b371033873b8", "Coffee and chocolate blended thick and cold.", true, ["new"]],
+  ["Cold Brew", "Cold Coffee", 130, null, "1559496417-e7f25cb247f3", "Slow-steeped coffee served over ice. Smooth and low on bitterness.", true, ["new"]],
 
   ["Masala Chai", "Tea", 30, null, "1556679343-c7306c1976bc", "Strong milk tea simmered with ginger and cardamom.", true, ["bestseller"]],
-  ["Ginger Tea", "Tea", 30, null, "1556679343-c7306c1976bc", "Hot tea with fresh ginger. Good on a rainy day.", true],
-  ["Lemon Tea", "Tea", 40, null, "1556679343-c7306c1976bc", "Light black tea with a squeeze of lemon.", true],
-  ["Green Tea", "Tea", 50, null, "1556679343-c7306c1976bc", "Delicate and refreshing, served hot.", true],
+  ["Ginger Tea", "Tea", 30, null, "1564890369478-c89ca6d9cde9", "Hot tea with fresh ginger. Good on a rainy day.", true],
+  ["Lemon Tea", "Tea", 40, null, "1597481499750-3e6b22637e12", "Light black tea with a squeeze of lemon.", true],
+  ["Green Tea", "Tea", 50, null, "1576092768241-dec231879fc3", "Delicate and refreshing, served hot.", true],
 
   ["Chocolate Truffle Pastry", "Cakes & Pastries", 90, 15, "1578985545062-69928b1d9587", "Dark chocolate ganache layered with soft sponge.", false, ["bestseller"]],
   ["Black Forest Pastry", "Cakes & Pastries", 80, 15, "1606890737304-57a1ca8a5b62", "Chocolate sponge, whipped cream and cherries.", false],
@@ -82,7 +82,7 @@ const MENU: (P | null)[] = [
 
   ["Veg Puff", "Cafe Bites", 25, null, "1601050690597-df0568f70950", "Flaky puff pastry with a spiced vegetable filling.", true],
   ["Bun Butter Jam", "Cafe Bites", 40, null, "1509440159596-0249088772ff", "Soft bun with butter and fruit jam. A tea-time favourite.", true],
-  ["Cheese Toast", "Cafe Bites", 60, null, "1573140401552-3fab0b24306f", "Thick toast, melted cheese and herbs.", true],
+  ["Cheese Toast", "Cafe Bites", 60, null, "1521305916504-4a1121188589", "Thick toast, melted cheese and herbs.", true],
   ["Masala Maggi", "Cafe Bites", 60, null, "1612929633738-8fe44f7ec841", "Spiced noodles with vegetables, served piping hot.", true],
 ];
 

@@ -160,7 +160,7 @@ export default function Landing() {
                 <h2 className="h-xl" data-reveal="split">
                   <Split text="Made with" /> <em><Split text="grace," from={2} /></em> <Split text="served with love." from={3} />
                 </h2>
-                <p className="story__sig" data-reveal="fade">— S. Rajan, Grace Cafe</p>
+                <p className="story__sig" data-reveal="fade">— the Grace Cafe family</p>
               </div>
               <p className="story__read" data-progress="read" style={{ "--n": storyWords.length } as CSSVars}>
                 {storyWords.map((w, i) => (
@@ -228,7 +228,6 @@ export default function Landing() {
                     <div><dt>Call / WhatsApp</dt><dd><a href={`tel:+91${PHONE}`}>+91 {PHONE_SHOWN}</a></dd></div>
                     <div><dt>Email</dt><dd><a href={`mailto:${EMAIL}`}>{EMAIL}</a></dd></div>
                     <div><dt>Instagram</dt><dd><a href={`https://instagram.com/${INSTA}`} target="_blank" rel="noopener noreferrer">@{INSTA}</a></dd></div>
-                    <div><dt>Owner</dt><dd>S. Rajan</dd></div>
                   </dl>
                   <div className="receipt__rule" />
                   <dl className="receipt__rows receipt__items">

@@ -21,7 +21,7 @@ export const settings = pgTable("settings", {
   shopName: text("shop_name").notNull(),
   publicUrl: text("public_url").notNull().default(""),
   /** Shop details printed on receipts and invoices — editable from Settings. */
-  ownerName: text("owner_name").notNull().default("S. Rajan"),
+  ownerName: text("owner_name").notNull().default("Grace Cafe"),
   location: text("location").notNull().default("Valliyur, Tamil Nadu"),
   /** Postal address, one line per row. */
   address: text("address").notNull().default("New, 792, Main Rd\nValliyur, Tamil Nadu - 627117"),
