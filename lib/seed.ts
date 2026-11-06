@@ -8,7 +8,7 @@ const U = (id: string) => `https://images.unsplash.com/photo-${id}?auto=format&f
 
 type P = [name: string, category: string, price: number, stock: number | null, img: string, description: string, eggless: boolean, tags?: string[]];
 
-const MENU: P[] = [
+const MENU: (P | null)[] = [
   ["Fresh Orange Juice", "Juices & Beverages", 70, null, "1600271886742-f049cd451bba", "Freshly squeezed, no added sugar. Served chilled.", true, ["bestseller"]],
   ["Mango Juice", "Juices & Beverages", 80, null, "1546173159-315724a31696", "Thick, sweet mango pulp blended with ice.", true],
   ["Mint Mojito", "Juices & Beverages", 90, null, "1551538827-9c037cb4f32a", "Lime, fresh mint and soda over crushed ice.", true, ["bestseller"]],
@@ -32,25 +32,25 @@ const MENU: P[] = [
   ["Chicken Nuggets (6)", "Fries & Sides", 110, null, "1626645738196-c2a7c87a8f58", "Crispy fried chicken bites with a dip.", false],
   ["Crispy Chicken Strips", "Fries & Sides", 130, null, "1562967914-608f82629710", "Golden fried strips served with creamy dip.", false],
 
-  ["Steamed Veg Momos (6)", "Momos", 70, null, "1626776876729-bab4369a5a5a", "Soft steamed dumplings with a vegetable filling, served with spicy chutney.", true, ["bestseller"]],
-  ["Steamed Chicken Momos (6)", "Momos", 90, null, "1534422298391-e4f8c172dddb", "Juicy chicken filling in thin steamed wrappers.", false],
-  ["Fried Momos (6)", "Momos", 90, null, "1563245372-f21724e3856d", "Golden fried momos with a crisp edge.", false],
-  ["Spicy Crispy Momos (6)", "Momos", 100, null, "1563245372-f21724e3856d", "Crunchy momos tossed in a hot, tangy sauce.", false, ["new"]],
+  null, // removed (not a cafe item) — keeps later ids stable
+  null, // removed (not a cafe item) — keeps later ids stable
+  null, // removed (not a cafe item) — keeps later ids stable
+  null, // removed (not a cafe item) — keeps later ids stable
 
-  ["Veg Burger", "Burgers", 80, null, "1568901346375-23c9450c58cd", "Crisp veg patty, fresh salad and house sauce.", true],
-  ["Crispy Chicken Burger", "Burgers", 120, null, "1571091718767-18b5b1457add", "Crunchy fried chicken fillet, lettuce and mayo.", false, ["bestseller"]],
-  ["Cheese Burger", "Burgers", 110, null, "1550547660-d9450f859349", "Melted cheese slice over a juicy patty.", false],
-  ["Loaded Burger", "Burgers", 150, null, "1568901346375-23c9450c58cd", "Double patty, cheese, salad and our signature sauce.", false, ["new"]],
+  null, // removed (not a cafe item) — keeps later ids stable
+  null, // removed (not a cafe item) — keeps later ids stable
+  null, // removed (not a cafe item) — keeps later ids stable
+  null, // removed (not a cafe item) — keeps later ids stable
 
-  ["Chicken Shawarma", "Shawarma & Wraps", 100, null, "1561651823-34feb02250e4", "Grilled chicken with garlic sauce and salad.", false, ["bestseller"]],
-  ["Paneer Wrap", "Shawarma & Wraps", 90, null, "1626700051175-6818013e1d4f", "Spiced paneer, onions and mint mayo in a soft wrap.", true],
-  ["Chicken Roll", "Shawarma & Wraps", 90, null, "1626700051175-6818013e1d4f", "Rolled flatbread with spiced chicken and sauce.", false],
+  null, // removed (not a cafe item) — keeps later ids stable
+  null, // removed (not a cafe item) — keeps later ids stable
+  null, // removed (not a cafe item) — keeps later ids stable
 
-  ["Cheese Pizza Slice", "Pizza & Snacks", 60, null, "1513104890138-7c749659a591", "Cheesy slice, fresh from the oven.", true],
-  ["Veg Loaded Pizza Slice", "Pizza & Snacks", 80, null, "1565299624946-b28f40a0ae38", "Topped with onions, capsicum, corn and olives.", true],
-  ["Garlic Bread", "Pizza & Snacks", 70, null, "1573140401552-3fab0b24306f", "Toasted with garlic butter and herbs.", true],
-  ["Samosa (2)", "Pizza & Snacks", 30, null, "1601050690597-df0568f70950", "Crisp pastry with spiced potato filling.", true],
-  ["Chips", "Pizza & Snacks", 20, 40, "1566478989037-eec170784d0b", "Packet chips, assorted flavours.", true],
+  null, // removed (not a cafe item) — keeps later ids stable
+  null, // removed (not a cafe item) — keeps later ids stable
+  ["Garlic Bread", "Cafe Bites", 70, null, "1573140401552-3fab0b24306f", "Toasted with garlic butter and herbs.", true],
+  null, // removed (not a cafe item) — keeps later ids stable
+  null, // removed (not a cafe item) — keeps later ids stable
 
   /* Cafe range — appended after the originals so their fixed ids (sp1…sp35) never shift. */
   ["Espresso", "Hot Coffee", 80, null, "1495474472287-4d71bcdd2085", "A short, strong shot of freshly pulled espresso.", true],
@@ -96,7 +96,10 @@ export function seedData(): { products: Product[]; coupons: Coupon[]; shopName: 
 
   /* Fixed ids keep the menu stable if the database is ever re-seeded. Records
      created at runtime use the random uid()/code() above. */
-  const products: Product[] = MENU.map(([name, category, price, stock, img, description, eggless, tags = []], i) => ({
+  const products: Product[] = MENU.flatMap((row, i) => {
+    if (!row) return [];
+    const [name, category, price, stock, img, description, eggless, tags = []] = row;
+    return [{
     id: `sp${i + 1}`,
     name,
     category,
@@ -111,7 +114,8 @@ export function seedData(): { products: Product[]; coupons: Coupon[]; shopName: 
     active: true,
     createdAt: now + i,
     updatedAt: now + i,
-  }));
+  }];
+  });
 
   return {
     shopName: "Grace cafe",
