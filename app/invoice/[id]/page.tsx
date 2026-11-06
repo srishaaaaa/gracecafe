@@ -56,9 +56,9 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
           <div className="space-y-1">
             {!details?.logoUrl || details.logoUrl === "/logo.png" ? (
               <>
-                {/* the shop's own 8:2 + CHAYAKKADA logo is the whole header mark on an invoice */}
-                <img src="/invoice-logo.png" alt={shop} style={{ height: 132, width: "auto", maxWidth: "100%", objectFit: "contain", marginBottom: 6, display: "block" }} />
-                <h1 style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" }}>{shop}</h1>
+                {/* the Grace Cafe badge, with the shop name written out beside the address */}
+                <img src="/invoice-logo.png" alt={shop} style={{ height: 96, width: "auto", maxWidth: "100%", objectFit: "contain", marginBottom: 6, display: "block" }} />
+                <h1 className="text-xl font-bold tracking-tight text-zinc-900 uppercase sm:text-2xl">{shop}</h1>
               </>
             ) : (
               <>

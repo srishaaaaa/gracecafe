@@ -346,11 +346,30 @@ export function AdminProvider({ initial, role, children }: { initial: AdminState
     setPrintNode(node);
     setPrintTick((n) => n + 1);
   }, []);
+  /* The print sheet holds the shop logo. Wait (briefly) for every image in it to finish loading before the
+     print dialog opens — otherwise the logo can be missing from the first print. */
   useEffect(() => {
     if (!printTick) return;
-    const r = requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
-    return () => cancelAnimationFrame(r);
+    let dead = false;
+    let raf = 0;
+    const go = () => {
+      const imgs = [...document.querySelectorAll<HTMLImageElement>(".adm-print img")];
+      const ready = Promise.all(imgs.map((i) => (i.complete ? Promise.resolve() : new Promise<void>((res) => (i.addEventListener("load", () => res(), { once: true }), i.addEventListener("error", () => res(), { once: true }))))));
+      const cap = new Promise<void>((res) => setTimeout(res, 4000));
+      Promise.race([ready, cap]).then(() => {
+        if (!dead) window.print();
+      });
+    };
+    raf = requestAnimationFrame(() => requestAnimationFrame(go));
+    return () => {
+      dead = true;
+      cancelAnimationFrame(raf);
+    };
   }, [printTick]);
+  /* warm the cache with the print logos so the first print doesn't wait on them */
+  useEffect(() => {
+    for (const src of ["/invoice-logo.png", "/invoice-logo-bw.png"]) new Image().src = src;
+  }, []);
 
   /* ---------- derived floor: every open tab, oldest first ---------- */
   const floor = useMemo<FloorTab[]>(() => {

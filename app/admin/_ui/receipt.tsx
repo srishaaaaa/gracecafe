@@ -89,9 +89,9 @@ function Sheet({ b, shop, logo, details, size }: { b: Bill; shop: string; logo?:
         <div className="inv__brand">
           {!logo || logo === "/logo.png" ? (
             <>
-              {/* the shop's own 8:2 + CHAYAKKADA logo is the whole header mark on an invoice */}
-              <img src="/invoice-logo.png" alt={shop} style={{ height: "7.4em", width: "auto", maxWidth: "100%", objectFit: "contain", marginBottom: 6, display: "block" }} />
-              <h1 style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" }}>{shop}</h1>
+              {/* the Grace Cafe badge, with the shop name written out beside the address */}
+              <img src="/invoice-logo.png" alt={shop} style={{ height: "5.2em", width: "auto", maxWidth: "100%", objectFit: "contain", marginBottom: 6, display: "block" }} />
+              <h1>{shop}</h1>
             </>
           ) : (
             <>
@@ -284,7 +284,7 @@ function Thermal({ b, shop, logo, lines, roll }: { b: Bill; shop: string; logo?:
     <div className={`rcpt rcpt--${roll}`} style={{ width: `${ROLL_MM[roll][1]}mm` }}>
       {!logo || logo === "/logo.png" ? (
         <>
-          {/* the 8:2 + CHAYAKKADA logo, in pure black and white so a thermal printer prints it sharply */}
+          {/* the GRACE CAFE wordmark, in pure black and white so a thermal printer prints it sharply */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/invoice-logo-bw.png" alt={shop} style={{ width: "100%", height: "auto", margin: "0 auto 4px", display: "block", imageRendering: "pixelated" }} />
           <h1 style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" }}>{shop}</h1>
