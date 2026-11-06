@@ -51,6 +51,39 @@ const MENU: P[] = [
   ["Garlic Bread", "Pizza & Snacks", 70, null, "1573140401552-3fab0b24306f", "Toasted with garlic butter and herbs.", true],
   ["Samosa (2)", "Pizza & Snacks", 30, null, "1601050690597-df0568f70950", "Crisp pastry with spiced potato filling.", true],
   ["Chips", "Pizza & Snacks", 20, 40, "1566478989037-eec170784d0b", "Packet chips, assorted flavours.", true],
+
+  /* Cafe range — appended after the originals so their fixed ids (sp1…sp35) never shift. */
+  ["Espresso", "Hot Coffee", 80, null, "1495474472287-4d71bcdd2085", "A short, strong shot of freshly pulled espresso.", true],
+  ["Americano", "Hot Coffee", 90, null, "1447933601403-0c6688de566e", "Espresso lengthened with hot water. Clean and bold.", true],
+  ["Cappuccino", "Hot Coffee", 110, null, "1509042239860-f550ce710b93", "Espresso, steamed milk and a thick velvety foam.", true, ["bestseller"]],
+  ["Café Latte", "Hot Coffee", 120, null, "1514432324607-a09d9b4aefdd", "Smooth steamed milk over espresso, finished with latte art.", true, ["bestseller"]],
+  ["Café Mocha", "Hot Coffee", 140, null, "1495474472287-4d71bcdd2085", "Espresso, chocolate and steamed milk, topped with cream.", true],
+  ["Filter Coffee", "Hot Coffee", 50, null, "1447933601403-0c6688de566e", "Traditional South Indian decoction coffee, frothy and strong.", true, ["bestseller"]],
+  ["Hot Chocolate", "Hot Coffee", 130, null, "1509042239860-f550ce710b93", "Rich, thick drinking chocolate. Comfort in a cup.", true],
+
+  ["Cold Coffee", "Cold Coffee", 110, null, "1461023058943-07fcbe16d735", "Chilled coffee blended with milk and ice cream.", true, ["bestseller"]],
+  ["Caramel Frappe", "Cold Coffee", 150, null, "1461023058943-07fcbe16d735", "Blended coffee with caramel, whipped cream and a drizzle.", true],
+  ["Mocha Frappe", "Cold Coffee", 160, null, "1461023058943-07fcbe16d735", "Coffee and chocolate blended thick and cold.", true, ["new"]],
+  ["Cold Brew", "Cold Coffee", 130, null, "1461023058943-07fcbe16d735", "Slow-steeped coffee served over ice. Smooth and low on bitterness.", true, ["new"]],
+
+  ["Masala Chai", "Tea", 30, null, "1556679343-c7306c1976bc", "Strong milk tea simmered with ginger and cardamom.", true, ["bestseller"]],
+  ["Ginger Tea", "Tea", 30, null, "1556679343-c7306c1976bc", "Hot tea with fresh ginger. Good on a rainy day.", true],
+  ["Lemon Tea", "Tea", 40, null, "1556679343-c7306c1976bc", "Light black tea with a squeeze of lemon.", true],
+  ["Green Tea", "Tea", 50, null, "1556679343-c7306c1976bc", "Delicate and refreshing, served hot.", true],
+
+  ["Chocolate Truffle Pastry", "Cakes & Pastries", 90, 15, "1578985545062-69928b1d9587", "Dark chocolate ganache layered with soft sponge.", false, ["bestseller"]],
+  ["Black Forest Pastry", "Cakes & Pastries", 80, 15, "1606890737304-57a1ca8a5b62", "Chocolate sponge, whipped cream and cherries.", false],
+  ["Red Velvet Pastry", "Cakes & Pastries", 100, 12, "1571115177098-24ec42ed204d", "Velvety red sponge with cream cheese frosting.", false, ["new"]],
+  ["Cheesecake Slice", "Cakes & Pastries", 140, 10, "1565958011703-44f9829ba187", "Creamy baked cheesecake on a buttery biscuit base.", false],
+  ["Butter Croissant", "Cakes & Pastries", 70, 20, "1555507036-ab1f4038808a", "Flaky, golden and buttery. Lovely with coffee.", true],
+  ["Blueberry Muffin", "Cakes & Pastries", 70, 20, "1563729784474-d77dbb933a9e", "Soft muffin studded with blueberries.", false],
+  ["Cupcake", "Cakes & Pastries", 50, 20, "1621303837174-89787a7d4729", "Vanilla cupcake with swirled buttercream.", false],
+  ["Choco Chip Cookies (2)", "Cakes & Pastries", 40, 30, "1558961363-fa8fdf82db35", "Crisp edges, chewy centre, loaded with chocolate chips.", true],
+
+  ["Veg Puff", "Cafe Bites", 25, null, "1601050690597-df0568f70950", "Flaky puff pastry with a spiced vegetable filling.", true],
+  ["Bun Butter Jam", "Cafe Bites", 40, null, "1509440159596-0249088772ff", "Soft bun with butter and fruit jam. A tea-time favourite.", true],
+  ["Cheese Toast", "Cafe Bites", 60, null, "1573140401552-3fab0b24306f", "Thick toast, melted cheese and herbs.", true],
+  ["Masala Maggi", "Cafe Bites", 60, null, "1612929633738-8fe44f7ec841", "Spiced noodles with vegetables, served piping hot.", true],
 ];
 
 export const uid = (n = 10) => randomBytes(n).toString("base64url").replace(/[-_]/g, "").slice(0, n) || randomBytes(4).toString("hex");

@@ -15,7 +15,7 @@ const ADDR2 = "Valliyur, Tamil Nadu — 627117";
 const MAPS = "https://www.google.com/maps/search/?api=1&query=Grace+Cafe+792+Main+Rd+Valliyur+Tamil+Nadu+627117";
 const LOGO = "/logo.png";
 
-const TICKER = ["Freshly brewed", "Feel the grace", "Made with love", "Coffee · Bites · Desserts", "Valliyur"];
+const TICKER = ["Coffee", "Tea & Chai", "Cakes & Pastries", "Shakes & Juices", "Burgers & Momos", "Feel the grace"];
 
 const GALLERY = [
   { img: U("1495474472287-4d71bcdd2085"), cap: "Golden hour coffee", tall: true },
@@ -27,7 +27,7 @@ const GALLERY = [
 ];
 
 const STORY =
-  "Grace Cafe is a little place in Valliyur made for slowing down. Every cup is made fresh, every plate is served with care, and every guest is treated like family. Come for the coffee, stay for the feeling — feel the grace.";
+  "Grace Cafe is a little place in Valliyur made for slowing down. Every cup is made fresh, every plate — from pastries to burgers — is served with care, and every guest is treated like family. Come for the coffee, stay for the feeling — feel the grace.";
 
 /** The Grace Cafe landing page (parked — see README.md). */
 export default function Landing() {
@@ -142,7 +142,7 @@ export default function Landing() {
                 <Split text="What are you" /> <em><Split text="craving?" from={3} /></em>
               </h2>
               <p className="lede" data-reveal="up" style={{ "--i": 2 } as CSSVars}>
-                A taste of what we serve. Ask at the counter or message us on WhatsApp for the full menu.
+                Coffee and tea, pastries and desserts, shakes, burgers, momos and more. Ask at the counter or message us on WhatsApp for today’s full menu.
               </p>
             </header>
             <Suspense>
@@ -180,7 +180,7 @@ export default function Landing() {
               <div className="gal__intro">
                 <span className="kicker">(03) Gallery</span>
                 <h2 className="h-xl">A peek <em>inside</em>.</h2>
-                <p className="lede">Coffee, corners and good company. Follow us on Instagram for more.</p>
+                <p className="lede">Coffee, cakes and good company. Follow us on Instagram for more.</p>
                 <span className="gal__arrow" aria-hidden="true">keep scrolling <i><Arrow /></i></span>
               </div>
               {GALLERY.map((g, i) => (
@@ -232,8 +232,8 @@ export default function Landing() {
                   </dl>
                   <div className="receipt__rule" />
                   <dl className="receipt__rows receipt__items">
-                    <div><dt>1 × Fresh coffee</dt><dd>made for you</dd></div>
-                    <div><dt>1 × Good company</dt><dd>yours</dd></div>
+                    <div><dt>1 × Cappuccino</dt><dd>made for you</dd></div>
+                    <div><dt>1 × Pastry</dt><dd>baked fresh</dd></div>
                     <div><dt>Grace</dt><dd>∞</dd></div>
                   </dl>
                   <div className="receipt__rule receipt__rule--bold" />

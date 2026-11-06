@@ -6,11 +6,14 @@ import { Arrow } from "@/app/_components/bits";
 const U = (id: string, w = 520) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=80`;
 
 export const MENU = [
-  { title: "Hot Coffee", note: "Fresh, strong and made to order.", img: U("1495474472287-4d71bcdd2085") },
-  { title: "Cold Coffee", note: "Chilled, creamy and just sweet enough.", img: U("1461023058943-07fcbe16d735") },
-  { title: "Latte & Cappuccino", note: "Smooth milk, a little art on top.", img: U("1514432324607-a09d9b4aefdd") },
-  { title: "Snacks & Bites", note: "Something warm to go with your cup.", img: U("1509042239860-f550ce710b93") },
-  { title: "Desserts", note: "A sweet finish, every time.", img: U("1442512595331-e89e73853f31") },
+  { title: "Hot Coffee", note: "Cappuccino, latte, mocha & South Indian filter coffee.", img: U("1495474472287-4d71bcdd2085") },
+  { title: "Cold Coffee", note: "Cold coffee, frappes & slow-steeped cold brew.", img: U("1461023058943-07fcbe16d735") },
+  { title: "Tea & Chai", note: "Masala chai, ginger, lemon and green tea.", img: U("1556679343-c7306c1976bc") },
+  { title: "Cakes & Pastries", note: "Truffle, red velvet, cheesecake, croissants & cookies.", img: U("1578985545062-69928b1d9587") },
+  { title: "Shakes & Juices", note: "Milkshakes, mojitos, fresh juice & smoothies.", img: U("1572490122747-3968b75cc699") },
+  { title: "Burgers & Sandwiches", note: "Grilled, crispy and loaded — made to order.", img: U("1568901346375-23c9450c58cd") },
+  { title: "Momos, Fries & Wraps", note: "Steamed or fried momos, fries and shawarma.", img: U("1626776876729-bab4369a5a5a") },
+  { title: "Desserts", note: "Brownie sundae, fudge brownie and ice cream.", img: U("1563805042-7684c019e1cb") },
 ];
 
 export default function MenuIndex() {
