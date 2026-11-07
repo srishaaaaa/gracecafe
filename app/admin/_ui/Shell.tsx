@@ -24,6 +24,7 @@ const NAV: Nav[] = [
   { href: "/admin/activity", label: "Activity log", icon: "list", roles: ["admin"] },
   { href: "/admin/coupons", label: "Coupons", icon: "coupon", roles: ["admin"] },
   { href: "/admin/loyalty", label: "Loyalty", icon: "star", roles: ["admin", "staff"] },
+  { href: "/admin/birthdays", label: "Birthdays", icon: "cake", roles: ["admin", "staff"] },
 ];
 
 /* The shop logo. The built-in 8:2 mark is shown in beige straight on the dark sidebar; a logo uploaded in Settings

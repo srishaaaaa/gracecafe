@@ -697,3 +697,23 @@ export const loyaltyMessages = pgTable(
   },
   (t) => [uniqueIndex("loyalty_messages_key_uq").on(t.key), index("loyalty_messages_customer_idx").on(t.customerId, t.createdAt)],
 );
+
+/* ============================== birthdays ============================== */
+
+/** A customer's date of birth, keyed by mobile number (billing customers need not be loyalty members).
+    `dob` is "YYYY-MM-DD"; only the month and day matter for the birthday offer. */
+export const birthdays = pgTable("birthdays", {
+  phone: text("phone").primaryKey(),
+  name: text("name").notNull().default(""),
+  dob: text("dob").notNull(),
+  createdAt: ms("created_at").notNull(),
+  updatedAt: ms("updated_at").notNull(),
+});
+
+/** Single row (id = 1): the birthday offers staff can pick from, which one is selected, and the WhatsApp wording. */
+export const birthdayConfig = pgTable("birthday_config", {
+  id: integer("id").primaryKey().default(1),
+  offers: jsonb("offers").$type<{ id: string; name: string; text: string }[]>().notNull().default([]),
+  selected: text("selected").notNull().default(""),
+  template: text("template").notNull().default(""),
+});

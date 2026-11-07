@@ -514,8 +514,15 @@ export type DB = {
   recipes: Recipe[];
 };
 
+/** A saved date of birth (month/day drive the birthday offer). */
+export type BirthdayEntry = { phone: string; name: string; dob: string; createdAt: number; updatedAt: number };
+export type BirthdayOffer = { id: string; name: string; text: string };
+export type BirthdayConfig = { offers: BirthdayOffer[]; selected: string; template: string };
+
 /** What the admin panel receives (no secrets). */
 export type AdminState = Omit<DB, "settings" | "users"> & {
+  birthdays: BirthdayEntry[];
+  birthdayConfig: BirthdayConfig;
   settings: ShopDetails & { shopName: string; publicUrl: string; walkInsOnly: boolean; kotEnabled: boolean; orderingEnabled: boolean; upiId: string; upiName: string; upiPhone: string; upiQrMinutes: number };
   users: PublicUser[];
   /** how loyalty points are earned, so each item can show what it earns */

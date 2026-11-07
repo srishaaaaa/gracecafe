@@ -4,11 +4,11 @@ import { code, uid } from "./seed";
 import { TZ, checkCoupon, computeBill, round2, shopToday } from "./money";
 import { hashPassword } from "./auth";
 import { db, type Db, type Tx } from "./db";
-import { batches, bills, coupons, expenseCategories, expenses, ingredientMoves, ingredients, meta, orders, products, recipes, sessions, settings, staffUsers, stockMovements, supplierInvoices, suppliers, approvalRequests, activityLog, loyaltyCustomers, loyaltyRewards, loyaltyCampaigns, loyaltyVouchers, giftOffers, productCategories } from "./db/schema";
+import { batches, bills, coupons, expenseCategories, expenses, ingredientMoves, ingredients, meta, orders, products, recipes, sessions, settings, staffUsers, stockMovements, supplierInvoices, suppliers, approvalRequests, activityLog, loyaltyCustomers, birthdays, birthdayConfig, loyaltyRewards, loyaltyCampaigns, loyaltyVouchers, giftOffers, productCategories } from "./db/schema";
 import * as L from "./loyalty/server";
 import { pointsPerUnit } from "./loyalty/engine";
 import type { LoyaltyConfig } from "./loyalty/config";
-import { INGREDIENT_UNITS, UPI_CHANNELS, type AdminState, type Coupon, type UpiChannel, Bill, Ingredient, IngredientLedger, IngredientMove, IngredientMoveType, IngredientUnit, StockLedger, MenuItem, Order, OrderItem, OrderStatus, PayMethod, Product, PublicUser, Recipe, RecipeItem, Session, StaffUser, StockMoveType, TabClose, TabView, ShopDetails } from "./types";
+import { INGREDIENT_UNITS, UPI_CHANNELS, type AdminState, type Coupon, type UpiChannel, Bill, Ingredient, IngredientLedger, IngredientMove, IngredientMoveType, IngredientUnit, StockLedger, MenuItem, Order, OrderItem, OrderStatus, PayMethod, Product, PublicUser, Recipe, RecipeItem, Session, StaffUser, StockMoveType, TabClose, TabView, ShopDetails, BirthdayConfig } from "./types";
 
 /* Every read/write the app makes, with validation. Route handlers are thin wrappers.
    Writes run inside store.mutate(), which serializes them and rolls back on error. */
@@ -353,8 +353,28 @@ export function removeCoupon(raw: unknown) {
 
 /* ================================ admin side ================================ */
 
+/* ---------- birthdays ---------- */
+export const DEFAULT_BIRTHDAY: BirthdayConfig = {
+  offers: [
+    { id: "bo1", name: "10% off", text: "10% off on your bill today" },
+    { id: "bo2", name: "Free brownie", text: "a free Fudge Brownie with any drink" },
+  ],
+  selected: "bo1",
+  template: `Hi {name}! 🎂 Happy Birthday!
+
+Here's a special treat from {shop}:
+🎁 {offer}
+
+Visit us in store or call {phone}.
+Follow us on Instagram @grace_cafe_valliyur`,
+};
+async function birthdayConfigOf(q: Db | Tx): Promise<BirthdayConfig> {
+  const r = await first(q.select().from(birthdayConfig).where(eq(birthdayConfig.id, 1)));
+  return r ? { offers: r.offers, selected: r.selected, template: r.template || DEFAULT_BIRTHDAY.template } : DEFAULT_BIRTHDAY;
+}
+
 export async function adminState(): Promise<AdminState> {
-  const [m, st, prods, sess, ords, bls, cps, us, exps, ecats, ings, btchs, rcps, sups, supInvs, apprs, lc, pcats] = await Promise.all([
+  const [m, st, prods, sess, ords, bls, cps, us, exps, ecats, ings, btchs, rcps, sups, supInvs, apprs, lc, pcats, bdays, bcfg] = await Promise.all([
     db.select().from(meta).where(eq(meta.id, 1)),
     db.select().from(settings).where(eq(settings.id, 1)),
     db.select().from(products).orderBy(asc(products.createdAt), asc(products.id)),
@@ -373,8 +393,12 @@ export async function adminState(): Promise<AdminState> {
     db.select().from(approvalRequests).orderBy(desc(approvalRequests.createdAt)).limit(50),
     L.getConfig(db),
     db.select().from(productCategories).orderBy(asc(productCategories.createdAt)),
+    db.select().from(birthdays).orderBy(asc(birthdays.name)),
+    birthdayConfigOf(db),
   ]);
   return {
+    birthdays: bdays,
+    birthdayConfig: bcfg,
     version: m[0]?.version ?? 0,
     seq: { order: m[0]?.orderSeq ?? 0 },
     settings: {
@@ -1707,6 +1731,40 @@ export async function runOp(tx: Tx, op: string, a: Args, role: string): Promise<
         if (b.couponCode) await tx.update(coupons).set({ used: sql`greatest(0, ${coupons.used} - 1)` }).where(eq(coupons.code, b.couponCode));
         await L.reverseBill(tx, b, role, 1, "Bill voided");
         return u;
+      }
+
+      /* ---------- birthdays ---------- */
+      case "birthday.save": {
+        const phone = str(a.phone, 20).replace(/\D/g, "").slice(-10);
+        const dob = str(a.dob, 10);
+        if (!/^[6-9]\d{9}$/.test(phone)) throw new ApiError("Enter a valid 10-digit mobile number.");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dob) || Number.isNaN(Date.parse(dob))) throw new ApiError("Pick a valid birthday.");
+        if (dob > shopToday(now)) throw new ApiError("A birthday can't be in the future.");
+        const name = str(a.name, 60);
+        const [x] = await tx
+          .insert(birthdays)
+          .values({ phone, name, dob, createdAt: now, updatedAt: now })
+          .onConflictDoUpdate({ target: birthdays.phone, set: { dob, updatedAt: now, ...(name ? { name } : {}) } })
+          .returning();
+        await tx.update(loyaltyCustomers).set({ birthday: dob }).where(eq(loyaltyCustomers.phone, phone)); // keep the loyalty profile in step
+        return x;
+      }
+      case "birthday.delete": {
+        const phone = str(a.phone, 20).replace(/\D/g, "").slice(-10);
+        await tx.delete(birthdays).where(eq(birthdays.phone, phone));
+        return null;
+      }
+      case "birthday.config": {
+        const raw = (Array.isArray(a.offers) ? a.offers : []) as Record<string, unknown>[];
+        const offers = raw
+          .slice(0, 30)
+          .map((o) => ({ id: str(o.id, 20) || uid(6), name: str(o.name, 40), text: str(o.text, 200) }))
+          .filter((o) => o.name && o.text);
+        const want = str(a.selected, 20);
+        const selected = offers.some((o) => o.id === want) ? want : offers[0]?.id ?? "";
+        const template = str(a.template, 1000) || DEFAULT_BIRTHDAY.template;
+        await tx.insert(birthdayConfig).values({ id: 1, offers, selected, template }).onConflictDoUpdate({ target: birthdayConfig.id, set: { offers, selected, template } });
+        return null;
       }
 
       /* ---------- loyalty (lib/loyalty/server.ts) ---------- */

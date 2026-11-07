@@ -162,6 +162,13 @@
       "when": 1791501600000,
       "tag": "0022_gift_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791501700000,
+      "tag": "0023_birthdays",
+      "breakpoints": true
     }
   ]
 }

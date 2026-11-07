@@ -109,6 +109,15 @@ const P: Record<string, React.ReactNode> = {
   ),
   zap: <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" />,
   star: <path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01Z" />,
+  cake: (
+    <>
+      <path d="M4 21h16" />
+      <path d="M5 21v-6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6" />
+      <path d="M5 17c1.5 1 2.5 1 4 0s2.5-1 3 0 2.5 1 3 0 2.5 1 4 0" />
+      <path d="M12 13V9" />
+      <path d="M12 3c.9 1.1 1 1.8 0 2.7-1-.9-.9-1.6 0-2.7Z" />
+    </>
+  ),
   calendar: (
     <>
       <rect x="3" y="4" width="18" height="18" rx="2" />

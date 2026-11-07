@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { UPI_CHANNELS, type Bill, type UpiChannel, type Coupon, type DiscountType, type OrderItem, type PayMethod } from "@/lib/types";
-import { checkCoupon, computeBill, couponStatus, mergeItems, round2, rupee } from "@/lib/money";
+import { checkCoupon, computeBill, couponStatus, mergeItems, round2, rupee, shopToday } from "@/lib/money";
 import { useAdmin, whoIs, type FloorTab } from "./Store";
 import Catalog from "./Catalog";
 import PrintModal, { PrintFormats } from "./PrintModal";
@@ -65,6 +65,7 @@ export default function BillingPage({ sessionId }: { sessionId?: string }) {
   const [lines, setLines] = useState<Line[]>(() => (start ? linesOf(start) : d?.lines.length ? d.lines : [blank()]));
   const [name, setName] = useState(start?.session.customerName ?? d?.name ?? "");
   const [phone, setPhone] = useState(start?.session.customerPhone ?? d?.phone ?? "");
+  const [dobEdit, setDobEdit] = useState<string | null>(null); // birthday (optional) typed here — saved for birthday offers
   const [sig, setSig] = useState(start ? sigOf(start) : d?.sig ?? "");
   const [coupon, setCoupon] = useState(start?.session.couponCode ?? d?.coupon ?? "");
   const [newCp, setNewCp] = useState<{ code: string; percent: string; minOrder: string } | null>(null);
@@ -103,6 +104,10 @@ export default function BillingPage({ sessionId }: { sessionId?: string }) {
     DRAFT = { mode, sel, lines, name, phone, sig, coupon, mType, mVal, extra, isGst, gstPct, pay, received, splitCash, splitCard, splitUpi, upiVia, linkSent, lSel, lPts, addedGifts };
   }, [mode, sel, lines, name, phone, sig, coupon, mType, mVal, extra, isGst, gstPct, pay, received, splitCash, splitCard, splitUpi, upiVia, linkSent, lSel, lPts, addedGifts]);
 
+  /* a customer whose birthday is already saved shows it, so staff only fill it in when it is new */
+  const savedDob = useMemo(() => s.birthdays.find((b) => b.phone === phone)?.dob ?? "", [s.birthdays, phone]);
+  const dob = dobEdit ?? savedDob;
+
   const f = mode === "tab" && sel ? floor.find((x) => x.session.id === sel) ?? null : null;
   const stale = f && sig && sigOf(f) !== sig;
   const lost = mode === "tab" && sel && !f;
@@ -114,6 +119,7 @@ export default function BillingPage({ sessionId }: { sessionId?: string }) {
     setLines([blank()]);
     setName("");
     setPhone("");
+    setDobEdit(null);
     setSig("");
     setCoupon("");
     setMType("amount");
@@ -272,6 +278,7 @@ export default function BillingPage({ sessionId }: { sessionId?: string }) {
       return;
     }
     const b = r.result;
+    if (dob && okPhone(phone) && dob !== savedDob) await act("birthday.save", { phone, name, dob }); // best effort — the bill is already saved
     if (w) w.location.href = waLink(b.customerPhone, billText(b, shop, s.settings.publicUrl));
     if (via === "print") print(<Receipt b={b} shop={shop} details={s.settings} fmt={fmt} showLoyalty={s.loyaltyEarn.display.receiptSummary} />);
     setSaveOpen(false);
@@ -390,6 +397,11 @@ export default function BillingPage({ sessionId }: { sessionId?: string }) {
               <label>
                 <span className={lbl}>Mobile number (WhatsApp)</span>
                 <input className={cx(big, phone && !okPhone(phone) && "border-amber-500")} value={phone} onChange={(e) => (setPhone(tenDigits(e.target.value)), setLSel(""), setLPts(""))} placeholder="Enter 10-digit number" inputMode="numeric" autoComplete="tel-national" />
+              </label>
+              <label>
+                <span className={lbl}>Birthday (optional)</span>
+                <input className={big} type="date" max={shopToday(now)} value={dob} onChange={(e) => setDobEdit(e.target.value)} />
+                <span className="mt-1 block text-[11px] text-slate-400">{dob && !okPhone(phone) ? "Add the mobile number to save this birthday." : "Saved for birthday offers (needs the mobile number)."}</span>
               </label>
             </div>
             <MemberStrip phone={phone} name={name} lk={loyal.lk} loading={loyal.loading} onEnrolled={loyal.reload} onJoined={setJoined} />
