@@ -39,6 +39,8 @@ function Chip({ on, children, onClick, tone = "red" }: { on: boolean; children: 
   );
 }
 
+const BATCH = 100;
+
 export default function OrdersPage() {
   const { s, act, confirm, role } = useAdmin();
   const [type, setType] = useState<"all" | "tab" | "counter">("all");
@@ -48,8 +50,7 @@ export default function OrdersPage() {
   const [q, setQ] = useState("");
   const [pay, setPay] = useState<PayF>("all");
   const [editing, setEditing] = useState<Bill | null>(null);
-  const [page, setPage] = useState(1);
-  const PAGE_SIZE = 25;
+  const [shown, setShown] = useState(BATCH); // how many invoices are listed; "Show more" adds another batch
   const [bill, setBill] = useState<Bill | null>(null);
   const [printFor, setPrintFor] = useState<Bill | null>(null);
 
@@ -93,14 +94,12 @@ export default function OrdersPage() {
     };
   }, [base]);
 
-  /* Any filter change starts the list again from page 1 (otherwise an invisible
-     page number carries over to a shorter result set). */
-  // a new filter starts the list again from page 1
+  /* A new filter starts the list again from the first 100. */
   const pageKey = JSON.stringify([type, date, from, to, needle, pay]);
   const [seenKey, setSeenKey] = useState(pageKey);
   if (seenKey !== pageKey) {
     setSeenKey(pageKey);
-    setPage(1);
+    setShown(BATCH);
   }
 
   /* The bills on screen as an Excel workbook with real columns. */
@@ -112,10 +111,8 @@ export default function OrdersPage() {
   const exportExcel = () => downloadExcel(`bills-${stamp()}.xlsx`, [{ name: "Bills", rows: exportRows() }]);
 
   const count = bills.length;
-  const pages = Math.max(1, Math.ceil(count / PAGE_SIZE));
-  const safePage = Math.min(page, pages);
-  const slice = bills.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const goto = (p: number) => setPage(Math.max(1, Math.min(pages, p)));
+  const slice = bills.slice(0, shown);
+  const left = count - slice.length;
 
   return (
     <Page>
@@ -297,16 +294,16 @@ export default function OrdersPage() {
           )}
         </div>
       </div>
-      {pages > 1 && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-[13px] text-slate-500">
+      {count > 0 && (
+        <div className="mt-4 flex flex-col items-center gap-3 text-[13px] text-slate-500">
           <span>
-            {(safePage - 1) * PAGE_SIZE + 1}–{(safePage - 1) * PAGE_SIZE + slice.length} of {count}
+            Showing <b className="text-slate-800">{slice.length}</b> of <b className="text-slate-800">{count}</b> invoice{count === 1 ? "" : "s"}
           </span>
-          <span className="flex items-center gap-2">
-            <button type="button" disabled={safePage <= 1} onClick={() => goto(safePage - 1)} className="h-9 rounded-xl bg-slate-100 px-4 font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-40">← Prev</button>
-            <span className="min-w-[96px] text-center font-semibold text-slate-700">Page {safePage} of {pages}</span>
-            <button type="button" disabled={safePage >= pages} onClick={() => goto(safePage + 1)} className="h-9 rounded-xl bg-slate-100 px-4 font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-40">Next →</button>
-          </span>
+          {left > 0 && (
+            <button type="button" onClick={() => setShown((n) => n + BATCH)} className="h-10 rounded-xl bg-slate-100 px-6 text-[13px] font-bold text-slate-800 transition hover:bg-slate-200">
+              Show {Math.min(BATCH, left)} more
+            </button>
+          )}
         </div>
       )}
 
