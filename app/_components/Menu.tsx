@@ -4,6 +4,7 @@ import { subscribeChanges } from "@/lib/realtime";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { MenuItem, OrderStatus, TabClose, TabView } from "@/lib/types";
 import { rupee } from "@/lib/money";
+import { entries, priceRange } from "@/lib/variants";
 import { Arrow, Cherry } from "./bits";
 import { UpiPay } from "./UpiPay";
 
@@ -249,7 +250,8 @@ export default function Menu({ initial }: { initial: TabView }) {
   const [seenClose, setSeenClose] = useStored("clc-seen", 0);
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
-  const [sheet, setSheet] = useState<null | "cart" | "tab">(null);
+  const [sheet, setSheet] = useState<null | "cart" | "tab" | "family">(null);
+  const [fam, setFam] = useState(""); // the product family whose options are open in the bottom sheet
   const [finish, setFinish] = useState(false);
   const [placed, setPlaced] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -603,7 +605,42 @@ export default function Menu({ initial }: { initial: TabView }) {
               <h2 id={`cat-${ci}`}>{c.name}</h2>
             </header>
             <ul>
-              {c.items.map((m, i) => {
+              {entries(c.items).map((e, i) => {
+                if (e.family !== null) {
+                  /* a family is one card: "Tea · from ₹20 · 2 options · Choose ›" — tapping it opens a sheet with a row per variant */
+                  const vs = e.items;
+                  const { min } = priceRange(vs);
+                  const inBasket = vs.reduce((n, v) => n + (cart[v.id] ?? 0), 0);
+                  const allOut = vs.every((v) => v.soldOut);
+                  const pic = vs.find((v) => v.image)?.image ?? "";
+                  const lead = vs[0];
+                  return (
+                    <li key={"fam:" + e.family} className={`tm-item ${allOut ? "is-out" : ""} ${inBasket ? "is-in" : ""}`} style={{ "--i": Math.min(i, 8) } as CSSVars}>
+                      <div className="tm-item__img">
+                        {pic ? <img src={sized(pic, 280)} alt="" loading={ci < 1 ? "eager" : "lazy"} decoding="async" /> : <span className="tm-item__ph">{e.family.slice(0, 1)}</span>}
+                        {allOut && <span className="tm-item__out">Sold out</span>}
+                      </div>
+                      <div className="tm-item__body">
+                        <h3>{e.family}</h3>
+                        {lead.tags.includes("bestseller") && <span className="tm-tag">★ Bestseller</span>}
+                        {lead.tags.includes("new") && <span className="tm-tag tm-tag--new">New</span>}
+                        {lead.description && <p>{lead.description}</p>}
+                        <div className="tm-item__foot">
+                          <span className="tm-from">
+                            from <b className="tm-price">{rupee(min)}</b>
+                          </span>
+                          <span className="tm-opts">{vs.length} options</span>
+                          <span className="tm-item__act">
+                            <button type="button" className="tm-add" disabled={allOut} onClick={() => (setFam(e.family), setSheet("family"))} aria-label={`Choose ${e.family}`}>
+                              {inBasket ? `${inBasket} added` : "Choose"} <span aria-hidden="true">›</span>
+                            </button>
+                          </span>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                }
+                const m = e.item;
                 const qty = cart[m.id] ?? 0;
                 return (
                   <li key={m.id} className={`tm-item ${m.soldOut ? "is-out" : ""} ${qty ? "is-in" : ""}`} style={{ "--i": Math.min(i, 8) } as CSSVars}>
@@ -666,6 +703,47 @@ export default function Menu({ initial }: { initial: TabView }) {
       </div>
 
       {/* ================= cart sheet ================= */}
+      {/* ================= a family's options ================= */}
+      <Sheet open={sheet === "family"} onClose={closeSheet} label={fam || "Options"}>
+        <div className="tm-fam">
+          <h2>{fam}</h2>
+          <p className="tm-fam__sub">Pick what you would like</p>
+          <ul>
+            {view.menu
+              .filter((m) => m.family && m.family.toLowerCase() === fam.toLowerCase())
+              .map((m) => {
+                const qty = cart[m.id] ?? 0;
+                return (
+                  <li key={m.id} className={`tm-var ${m.soldOut ? "is-out" : ""} ${qty ? "is-in" : ""}`}>
+                    <span className="tm-var__img">{m.image ? <img src={sized(m.image, 120)} alt="" loading="lazy" decoding="async" /> : <span>{(m.variant || m.name).slice(0, 1)}</span>}</span>
+                    <div className="tm-var__body">
+                      <b>{m.variant || m.name}</b>
+                      <span className="tm-var__meta">
+                        <b className="tm-price">{rupee(m.price)}</b>
+                        {m.points > 0 && <span className="tm-pts">+{m.points} pts</span>}
+                        {m.left !== null && !m.soldOut && <span className="tm-left">Only {m.left} left</span>}
+                      </span>
+                    </div>
+                    {ordering &&
+                      (m.soldOut ? (
+                        <span className="tm-var__out">Sold out</span>
+                      ) : qty ? (
+                        <Stepper qty={qty} max={maxFor(m)} name={m.name} onChange={(n) => setQty(m.id, n)} />
+                      ) : (
+                        <button type="button" className="tm-add" onClick={(e) => add(m, e)} aria-label={`Add ${m.name}`}>
+                          Add <span aria-hidden="true">+</span>
+                        </button>
+                      ))}
+                  </li>
+                );
+              })}
+          </ul>
+          <button type="button" className="tm-send" onClick={closeSheet}>
+            Done
+          </button>
+        </div>
+      </Sheet>
+
       <Sheet open={sheet === "cart"} onClose={closeSheet} label="Your order">
         <div className="tm-ticket">
           <div className="tm-ticket__head">

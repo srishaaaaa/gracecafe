@@ -18,6 +18,9 @@ export type Product = {
   tags: string[];
   /** hidden from the customer menu when false */
   active: boolean;
+  /** Variants: "Popcorn" (family) + "Large" (variant) make the product "Popcorn (Large)". Both empty = an ordinary product. */
+  family: string;
+  variant: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -191,6 +194,7 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   "order.status": "Changed an order's status",
   "product.save": "Saved a product",
   "product.delete": "Deleted a product",
+  "product.family.save": "Saved a product with variants",
   "product.stock": "Changed a product's stock",
   "product.toggle": "Switched a product on/off the menu",
   "category.rename": "Renamed a category",
@@ -570,7 +574,7 @@ export type TabView = {
   } | null;
 };
 
-export type MenuItem = Pick<Product, "id" | "name" | "category" | "price" | "description" | "image" | "tags"> & {
+export type MenuItem = Pick<Product, "id" | "name" | "category" | "price" | "description" | "image" | "tags" | "family" | "variant"> & {
   soldOut: boolean;
   left: number | null;
   /** loyalty points one of this item earns (0 = none) */

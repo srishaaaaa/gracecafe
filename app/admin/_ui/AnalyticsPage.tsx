@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { UPI_CHANNELS, type Bill } from "@/lib/types";
+import { Fragment, useMemo, useState } from "react";
+import { UPI_CHANNELS, type Bill, type Product } from "@/lib/types";
+import { entries } from "@/lib/variants";
 import { round2, rupee, shopToday } from "@/lib/money";
 import { completedIn, customerStats, expensesIn, gstReport, isoWeek, itemStats, monthly, rangeOf, splitGst, startOfWeek, paymentStats, summary, weekly, type Period } from "@/lib/analytics";
 import Link from "next/link";
@@ -746,6 +747,16 @@ function ProductsTab({ bills, q, setQ }: { bills: Bill[]; q: string; setQ: (v: s
   const needle = q.trim().toLowerCase();
   const low = s.products.filter((p) => p.stock !== null && p.stock <= p.lowAt);
   const byQty = [...stats].sort((a, b) => b.qty - a.qty);
+  /* variants of one family are grouped: a total row, with each variant's own numbers under it */
+  const groups = entries(
+    rows
+      .filter((r) => !needle || r.name.toLowerCase().includes(needle))
+      .map((r) => {
+        const p = r.productId ? s.products.find((x) => x.id === r.productId) : null;
+        return { ...r, p, family: p?.family ?? "" };
+      }),
+    false,
+  );
   return (
     <div className="adm-in space-y-5">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -769,37 +780,70 @@ function ProductsTab({ bills, q, setQ }: { bills: Bill[]; q: string; setQ: (v: s
               </tr>
             </thead>
             <tbody>
-              {rows
-                .filter((r) => !needle || r.name.toLowerCase().includes(needle))
-                .map((r, i) => {
-                  const p = r.productId ? s.products.find((x) => x.id === r.productId) : null;
+              {groups.map((e, i) => {
+                const share = (revenue: number) => (
+                  <td className={td}>
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">{revenue > 0 && <div className="adm-fill h-full rounded-full bg-red-600" style={{ width: `${(revenue / total) * 100}%` }} />}</div>
+                      <span className="w-10 text-right text-[11px] text-slate-500">{Math.round((revenue / total) * 100)}%</span>
+                    </div>
+                  </td>
+                );
+                const stockOf = (p: Product | null | undefined) =>
+                  !p ? (
+                    <span className="text-slate-300">—</span>
+                  ) : p.stock === null ? (
+                    <span className="text-slate-400">∞</span>
+                  ) : (
+                    <span className={cx("font-semibold", p.stock <= 0 ? "text-red-600" : p.stock <= p.lowAt ? "text-amber-600" : "text-slate-700")}>{p.stock}</span>
+                  );
+                if (e.family === null) {
+                  const r = e.item;
                   return (
                     <tr key={r.key} className="border-b border-slate-100 last:border-0">
                       <td className={cx(td, "text-slate-400")}>{i + 1}</td>
                       <td className={cx(td, "font-semibold text-slate-900")}>{r.name}</td>
-                      <td className={cx(td, "text-slate-500")}>{p?.category ?? "Custom item"}</td>
+                      <td className={cx(td, "text-slate-500")}>{r.p?.category ?? "Custom item"}</td>
                       <td className={cx(td, "text-right font-semibold")}>{r.qty}</td>
                       <td className={cx(td, "text-right font-bold text-slate-900")}>{rupee(r.revenue)}</td>
-                      <td className={td}>
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-                            {r.revenue > 0 && <div className="adm-fill h-full rounded-full bg-red-600" style={{ width: `${(r.revenue / total) * 100}%` }} />}
-                          </div>
-                          <span className="w-10 text-right text-[11px] text-slate-500">{Math.round((r.revenue / total) * 100)}%</span>
-                        </div>
-                      </td>
-                      <td className={cx(td, "text-right")}>
-                        {!p ? (
-                          <span className="text-slate-300">—</span>
-                        ) : p.stock === null ? (
-                          <span className="text-slate-400">∞</span>
-                        ) : (
-                          <span className={cx("font-semibold", p.stock <= 0 ? "text-red-600" : p.stock <= p.lowAt ? "text-amber-600" : "text-slate-700")}>{p.stock}</span>
-                        )}
-                      </td>
+                      {share(r.revenue)}
+                      <td className={cx(td, "text-right")}>{stockOf(r.p)}</td>
                     </tr>
                   );
-                })}
+                }
+                /* a family: one row for the total, each variant's own numbers indented under it */
+                const vs = e.items;
+                const qty = vs.reduce((a, v) => a + v.qty, 0);
+                const revenue = vs.reduce((a, v) => a + v.revenue, 0);
+                const tracked = vs.filter((v) => v.p && v.p.stock !== null);
+                const stockTotal = tracked.reduce((a, v) => a + (v.p?.stock ?? 0), 0);
+                return (
+                  <Fragment key={"fam:" + e.family}>
+                    <tr className="border-b border-slate-100 bg-slate-50/50">
+                      <td className={cx(td, "text-slate-400")}>{i + 1}</td>
+                      <td className={cx(td, "font-bold text-slate-900")}>
+                        {e.family} <span className="ml-1 text-[11.5px] font-medium text-slate-400">{vs.length} variants</span>
+                      </td>
+                      <td className={cx(td, "text-slate-500")}>{vs[0].p?.category ?? ""}</td>
+                      <td className={cx(td, "text-right font-bold")}>{qty}</td>
+                      <td className={cx(td, "text-right font-extrabold text-slate-900")}>{rupee(revenue)}</td>
+                      {share(revenue)}
+                      <td className={cx(td, "text-right font-semibold text-slate-700")}>{tracked.length ? stockTotal : <span className="text-slate-400">∞</span>}</td>
+                    </tr>
+                    {vs.map((v) => (
+                      <tr key={v.key} className="border-b border-slate-100 last:border-0">
+                        <td className={td} />
+                        <td className={cx(td, "pl-8 text-slate-700")}>{v.p?.variant || v.name}</td>
+                        <td className={td} />
+                        <td className={cx(td, "text-right font-semibold")}>{v.qty}</td>
+                        <td className={cx(td, "text-right font-semibold text-slate-800")}>{rupee(v.revenue)}</td>
+                        {share(v.revenue)}
+                        <td className={cx(td, "text-right")}>{stockOf(v.p)}</td>
+                      </tr>
+                    ))}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

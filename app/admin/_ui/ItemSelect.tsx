@@ -1,16 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { rupee } from "@/lib/money";
+import { entries } from "@/lib/variants";
 import { Icon, Modal, SearchBox, cx, inputLineCls } from "./kit";
 
-export type PickItem = { id: string; name: string; category: string; price?: number };
+export type PickItem = { id: string; name: string; category: string; price?: number; family?: string; variant?: string };
 
 /** The menu-item chooser used wherever an item is picked from a dropdown: choose a category first (or search), then the
     item. Items are grouped by category, so a long menu is easy to scan. */
 export function ItemPickerModal({ products, value, onPick, onClose, title = "Pick an item", clear }: { products: PickItem[]; value?: string; onPick: (id: string) => void; onClose: () => void; title?: string; clear?: string }) {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("");
+  const [openFams, setOpenFams] = useState<Set<string>>(new Set());
   const cats = useMemo(() => {
     const m = new Map<string, number>();
     for (const p of products) m.set(p.category || "Other", (m.get(p.category || "Other") ?? 0) + 1);
@@ -51,15 +53,46 @@ export function ItemPickerModal({ products, value, onPick, onClose, title = "Pic
             groups.map(([c, list]) => (
               <div key={c}>
                 {!cat && <p className="sticky top-0 bg-slate-50 px-3.5 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-500">{c}</p>}
-                {list.map((p) => (
-                  <button key={p.id} type="button" onClick={() => onPick(p.id)} className={cx("flex w-full items-center justify-between gap-3 border-b border-slate-50 px-3.5 py-2.5 text-left text-[13.5px] hover:bg-slate-50", value === p.id && "bg-red-50")}>
-                    <span className="min-w-0 truncate font-semibold text-slate-900">{p.name}</span>
-                    <span className="flex shrink-0 items-center gap-2 text-slate-500">
-                      {p.price !== undefined && rupee(p.price)}
-                      {value === p.id && <Icon name="check" size={14} className="text-red-600" />}
-                    </span>
-                  </button>
-                ))}
+                {entries(list).map((e) => {
+                  const one = (p: PickItem, nested: boolean) => (
+                    <button key={p.id} type="button" onClick={() => onPick(p.id)} className={cx("flex w-full items-center justify-between gap-3 border-b border-slate-50 py-2.5 pr-3.5 text-left text-[13.5px] hover:bg-slate-50", nested ? "pl-8" : "pl-3.5", value === p.id && "bg-red-50")}>
+                      <span className="min-w-0 truncate font-semibold text-slate-900">{nested ? p.variant || p.name : p.name}</span>
+                      <span className="flex shrink-0 items-center gap-2 text-slate-500">
+                        {p.price !== undefined && rupee(p.price)}
+                        {value === p.id && <Icon name="check" size={14} className="text-red-600" />}
+                      </span>
+                    </button>
+                  );
+                  if (e.family === null) return one(e.item, false);
+                  const key = e.family.toLowerCase();
+                  const isOpen = openFams.has(key) || !!q.trim() || e.items.some((v) => v.id === value);
+                  const prices = e.items.map((v) => v.price).filter((x): x is number => x !== undefined);
+                  return (
+                    <Fragment key={"fam:" + e.family}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenFams((cur) => {
+                            const n = new Set(cur);
+                            if (n.has(key)) n.delete(key);
+                            else n.add(key);
+                            return n;
+                          })
+                        }
+                        className="flex w-full items-center justify-between gap-3 border-b border-slate-50 px-3.5 py-2.5 text-left text-[13.5px] hover:bg-slate-50"
+                        aria-expanded={isOpen}
+                      >
+                        <span className="flex min-w-0 items-center gap-2 font-semibold text-slate-900">
+                          <Icon name="chevron" size={13} className={cx("shrink-0 text-slate-400 transition", isOpen ? "rotate-90" : "")} />
+                          <span className="truncate">{e.family}</span>
+                          <span className="shrink-0 text-[11.5px] font-medium text-slate-400">{e.items.length} options</span>
+                        </span>
+                        {prices.length > 0 && <span className="shrink-0 text-slate-500">from {rupee(Math.min(...prices))}</span>}
+                      </button>
+                      {isOpen && e.items.map((v) => one(v, true))}
+                    </Fragment>
+                  );
+                })}
               </div>
             ))
           )}

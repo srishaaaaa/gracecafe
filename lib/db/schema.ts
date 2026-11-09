@@ -69,6 +69,10 @@ export const products = pgTable("products", {
   eggless: boolean("eggless").notNull().default(false),
   tags: jsonb("tags").$type<string[]>().notNull().default([]),
   active: boolean("active").notNull().default(true),
+  /** Variants: every size/flavour is a real product row. `family` ("Popcorn") and `variant` ("Large") only group and
+      label them; `name` always holds the full text "Popcorn (Large)". Both empty = an ordinary product. */
+  family: text("family").notNull().default(""),
+  variant: text("variant").notNull().default(""),
   createdAt: ms("created_at").notNull(),
   updatedAt: ms("updated_at").notNull(),
 });

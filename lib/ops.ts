@@ -75,15 +75,23 @@ export async function openSession(q: Q, phone: string): Promise<Session | null> 
 const imgLink = (id: string, v: number, src: string) => (src.startsWith("data:") ? `/api/img/product/${id}?v=${v}` : src);
 const logoLink = (src: string) => (src.startsWith("data:") ? `/shop-logo?v=${src.length}` : src);
 
+/** Names of the product families ("Popcorn"), lower-cased. */
+const familyNames = (all: Pick<Product, "family">[]) => new Set(all.filter((p) => p.family).map((p) => p.family.toLowerCase()));
+/** A plain product whose name is also a family ("Tea" next to "Tea (Masala)") is hidden from sale, so the heading is never sold by accident. */
+const isLeftover = (p: Pick<Product, "family" | "name">, families: Set<string>) => !p.family && families.has(p.name.toLowerCase());
+
 export function menuOf(all: Product[], cfg: { enabled: boolean; earn: LoyaltyConfig["earn"] }): MenuItem[] {
   const order: string[] = [];
   for (const p of all) if (!order.includes(p.category)) order.push(p.category);
+  const families = familyNames(all);
   return all
-    .filter((p) => p.active)
+    .filter((p) => p.active && !isLeftover(p, families))
     .sort((a, b) => order.indexOf(a.category) - order.indexOf(b.category) || a.createdAt - b.createdAt)
     .map((p) => ({
       id: p.id,
       name: p.name,
+      family: p.family,
+      variant: p.variant,
       category: p.category,
       price: p.price,
       description: p.description,
@@ -648,7 +656,10 @@ const restock = (tx: Tx, items: OrderItem[], m: Move) => moveStock(tx, tally(ite
 
 async function saveProduct(tx: Tx, a: Args, role = "admin") {
   const now = Date.now();
-  const name = str(a.name, 80);
+  // a variant's name is always built from its family and its own label
+  const family = str(a.family, 60);
+  const variant = str(a.variant, 40);
+  const name = family && variant ? family + " (" + variant + ")" : str(a.name, 80);
   const category = str(a.category, 40) || "Uncategorised";
   const price = round2(num(a.price));
   const stockRaw = optNum(a.stock);
@@ -666,6 +677,8 @@ async function saveProduct(tx: Tx, a: Args, role = "admin") {
     ...(typeof a.image === "string" && a.image.startsWith("/api/img/product/") ? {} : { image: str(a.image, 6_500_000) }), // room for a ~4 MB base64 data URL (plus headroom)
     tags: Array.isArray(a.tags) ? (a.tags as unknown[]).map((x) => str(x, 20).toLowerCase()).filter(Boolean).slice(0, 6) : [],
     active: a.active !== false,
+    // only touched when the caller says so, so editing a plain product never clears or sets variant text
+    ...(a.family !== undefined || a.variant !== undefined ? { family, variant } : {}),
     // how many loyalty points one of these earns is the admin's call; staff edits leave it as it is
     ...(role === "admin" && a.loyaltyPoints !== undefined ? { loyaltyPoints: optNum(a.loyaltyPoints) === null ? null : Math.max(0, Math.floor(num(a.loyaltyPoints))) } : {}),
   };
@@ -684,6 +697,69 @@ async function saveProduct(tx: Tx, a: Args, role = "admin") {
   const [p] = await tx.insert(products).values({ id: uid(), ...fields, createdAt: now, updatedAt: now }).returning();
   if (p.stock) await logMove(tx, p, { type: "initial", note: "Opening stock" }, p.stock, p.stock, now);
   return p;
+}
+
+/** Deletes a product and everything that points at it. Shared by "delete product" and by a variant removed in the
+    variants form. The stock history goes with it so the Stock movement log keeps no lines for something that no longer
+    exists; past orders and bills keep their own copy of what was sold (they are money records). */
+async function removeProduct(tx: Tx, id: string) {
+  const p = await must(tx.select().from(products).where(eq(products.id, id)), "Product");
+  await tx.delete(stockMovements).where(eq(stockMovements.productId, p.id));
+  // nothing is left pointing at the deleted product: a free-item reward for it is switched off, waiting
+  // free-item vouchers for it are cancelled, and campaigns stop targeting it
+  await tx.update(loyaltyRewards).set({ productId: null, active: false }).where(eq(loyaltyRewards.productId, p.id));
+  await tx.update(loyaltyVouchers).set({ status: "cancelled", note: "The product was deleted" }).where(and(eq(loyaltyVouchers.productId, p.id), eq(loyaltyVouchers.status, "issued")));
+  await tx.update(loyaltyCampaigns).set({ productIds: sql`${loyaltyCampaigns.productIds} - ${p.id}::text` }).where(sql`${loyaltyCampaigns.productIds} ? ${p.id}`);
+  await tx.delete(products).where(eq(products.id, p.id));
+}
+
+/** One save for a whole set of variants ("Popcorn": Small, Medium, Large), in the caller's transaction.
+    A variant missing from the new list is deleted; one without an id is created; one with an id is updated.
+    Each goes through the normal single-product save, so it gets the same checks, the stock log entries and the
+    admin-only loyalty rule. */
+async function saveFamily(tx: Tx, a: Args, role: string) {
+  const family = str(a.family, 60);
+  const oldFamily = str(a.oldFamily, 60);
+  if (!family) throw new ApiError("Give the product a name.");
+  const raw = (Array.isArray(a.variants) ? a.variants : []) as Args[];
+  if (!raw.length) throw new ApiError("Add at least one variant.");
+  const seen = new Set<string>();
+  for (const v of raw) {
+    const label = str(v.name, 40);
+    if (!label) throw new ApiError("Every variant needs a name.");
+    if (seen.has(label.toLowerCase())) throw new ApiError("Two variants are called \"" + label + "\".");
+    seen.add(label.toLowerCase());
+  }
+  // variants that existed before and are not in the new list go away (their stock history with them)
+  const keep = new Set(raw.map((v) => str(v.id, 40)).filter(Boolean));
+  if (oldFamily) {
+    const before = await tx.select().from(products).where(eq(products.family, oldFamily));
+    for (const p of before) if (!keep.has(p.id)) await removeProduct(tx, p.id);
+  }
+  const out: unknown[] = [];
+  for (const v of raw) {
+    out.push(
+      await saveProduct(
+        tx,
+        {
+          id: v.id,
+          family,
+          variant: str(v.name, 40),
+          category: a.category,
+          description: a.description,
+          tags: a.tags,
+          price: v.price,
+          stock: v.stock,
+          lowAt: v.lowAt,
+          image: v.image,
+          active: v.active,
+          loyaltyPoints: v.loyaltyPoints,
+        },
+        role,
+      ),
+    );
+  }
+  return out;
 }
 
 async function saveCoupon(tx: Tx, a: Args) {
@@ -1326,19 +1402,11 @@ export async function runOp(tx: Tx, op: string, a: Args, role: string): Promise<
       case "product.save":
         return saveProduct(tx, a, role);
       case "product.delete": {
-        const p = await must(tx.select().from(products).where(eq(products.id, id)), "Product");
-        /* The product's stock history goes with it, so the Stock movement log doesn't keep lines for something
-           that no longer exists. Past orders and bills keep their own copy of what was sold (they are money
-           records), and the Activity log still shows that the product was deleted. */
-        await tx.delete(stockMovements).where(eq(stockMovements.productId, p.id));
-        // nothing is left pointing at the deleted product: a free-item reward for it is switched off, waiting
-        // free-item vouchers for it are cancelled, and campaigns stop targeting it
-        await tx.update(loyaltyRewards).set({ productId: null, active: false }).where(eq(loyaltyRewards.productId, p.id));
-        await tx.update(loyaltyVouchers).set({ status: "cancelled", note: "The product was deleted" }).where(and(eq(loyaltyVouchers.productId, p.id), eq(loyaltyVouchers.status, "issued")));
-        await tx.update(loyaltyCampaigns).set({ productIds: sql`${loyaltyCampaigns.productIds} - ${p.id}::text` }).where(sql`${loyaltyCampaigns.productIds} ? ${p.id}`);
-        await tx.delete(products).where(eq(products.id, p.id));
+        await removeProduct(tx, id);
         return null;
       }
+      case "product.family.save":
+        return saveFamily(tx, a, role);
       case "product.stock": {
         /* The +/- steppers and the Stock in/out form only ever send a delta. That takes
            two statements (update-and-read-back, then the ledger row) instead of the

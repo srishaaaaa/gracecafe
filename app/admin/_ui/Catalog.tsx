@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { Product } from "@/lib/types";
 import { rupee } from "@/lib/money";
 import { pointsPerUnit } from "@/lib/loyalty/engine";
+import { entries, priceRange } from "@/lib/variants";
 import { useAdmin } from "./Store";
 import { Btn, Icon, Modal, SearchBox, cx } from "./kit";
 
@@ -30,6 +31,7 @@ export default function Catalog({
   const [cat, setCat] = useState("All");
   const [cart, setCart] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
+  const [openFams, setOpenFams] = useState<Set<string>>(new Set()); // families expanded in the list
 
   const close = () => {
     setQ("");
@@ -50,6 +52,51 @@ export default function Catalog({
       else delete next[p.id];
       return next;
     });
+
+  /* one product row; a variant is shown as just its own name, indented under its family */
+  const item = (p: Product, nested: boolean) => {
+    const out = p.stock !== null && p.stock <= 0;
+          const n = cart[p.id] ?? 0;
+          const pts = pointsPerUnit(p, s.loyaltyEarn);
+          return (
+            <li key={p.id} className={nested ? "sm:pl-5" : ""}>
+              <div
+                className={cx(
+                  "flex items-center gap-3 rounded-2xl border p-2.5 transition",
+                  n ? "border-slate-400 bg-slate-50" : "border-slate-100 hover:border-slate-300",
+                  out && onAdd && "opacity-50",
+                )}
+              >
+                {p.image ? <img src={thumb(p.image)} alt="" className="h-12 w-12 rounded-xl object-cover" loading="lazy" /> : <span className="grid h-12 w-12 place-items-center rounded-xl bg-slate-100 font-bold text-slate-400">{p.name[0]}</span>}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13.5px] font-semibold text-slate-900">{nested ? p.variant : p.name}</p>
+                  <p className="text-[12px] text-slate-500">
+                    <b className="text-slate-800">{rupee(p.price)}</b>{pts > 0 && <b className="ml-1.5 rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700" title="Loyalty points a member earns">+{pts} pts</b>} · {p.stock === null ? "always available" : out ? <span className="text-red-600">sold out</span> : `${p.stock} in stock`}
+                  </p>
+                </div>
+                {onPick ? (
+                  <Btn size="sm" kind="soft" onClick={() => (onPick(p), close())}>
+                    Use
+                  </Btn>
+                ) : n ? (
+                  <span className="flex items-center gap-1">
+                    <button type="button" className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-700" onClick={() => bump(p, -1)} aria-label="Less">
+                      <Icon name="minus" size={14} />
+                    </button>
+                    <b className="w-6 text-center text-[14px]">{n}</b>
+                    <button type="button" className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-700" onClick={() => bump(p, 1)} aria-label="More" disabled={p.stock !== null && n >= p.stock}>
+                      <Icon name="plus" size={14} />
+                    </button>
+                  </span>
+                ) : (
+                  <Btn size="sm" kind="soft" disabled={out} onClick={() => bump(p, 1)} icon="plus">
+                    Add
+                  </Btn>
+                )}
+              </div>
+            </li>
+          );
+  };
 
   return (
     <Modal
@@ -94,47 +141,41 @@ export default function Catalog({
         ))}
       </div>
       <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-        {list.map((p) => {
-          const out = p.stock !== null && p.stock <= 0;
-          const n = cart[p.id] ?? 0;
-          const pts = pointsPerUnit(p, s.loyaltyEarn);
+        {entries(list).map((e) => {
+          if (e.family === null) return item(e.item, false);
+          const vs = e.items;
+          const key = e.family.toLowerCase();
+          const isOpen = openFams.has(key) || !!q.trim();
+          const { min } = priceRange(vs);
+          const inCart = vs.reduce((n, v) => n + (cart[v.id] ?? 0), 0);
           return (
-            <li key={p.id}>
-              <div
-                className={cx(
-                  "flex items-center gap-3 rounded-2xl border p-2.5 transition",
-                  n ? "border-slate-400 bg-slate-50" : "border-slate-100 hover:border-slate-300",
-                  out && onAdd && "opacity-50",
-                )}
-              >
-                {p.image ? <img src={thumb(p.image)} alt="" className="h-12 w-12 rounded-xl object-cover" loading="lazy" /> : <span className="grid h-12 w-12 place-items-center rounded-xl bg-slate-100 font-bold text-slate-400">{p.name[0]}</span>}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13.5px] font-semibold text-slate-900">{p.name}</p>
-                  <p className="text-[12px] text-slate-500">
-                    <b className="text-slate-800">{rupee(p.price)}</b>{pts > 0 && <b className="ml-1.5 rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-700" title="Loyalty points a member earns">+{pts} pts</b>} · {p.stock === null ? "always available" : out ? <span className="text-red-600">sold out</span> : `${p.stock} in stock`}
-                  </p>
-                </div>
-                {onPick ? (
-                  <Btn size="sm" kind="soft" onClick={() => (onPick(p), close())}>
-                    Use
-                  </Btn>
-                ) : n ? (
-                  <span className="flex items-center gap-1">
-                    <button type="button" className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-700" onClick={() => bump(p, -1)} aria-label="Less">
-                      <Icon name="minus" size={14} />
-                    </button>
-                    <b className="w-6 text-center text-[14px]">{n}</b>
-                    <button type="button" className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-700" onClick={() => bump(p, 1)} aria-label="More" disabled={p.stock !== null && n >= p.stock}>
-                      <Icon name="plus" size={14} />
-                    </button>
+            <Fragment key={"fam:" + e.family}>
+              <li className={isOpen ? "sm:col-span-2" : ""}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setOpenFams((cur) => {
+                      const n = new Set(cur);
+                      if (n.has(key)) n.delete(key);
+                      else n.add(key);
+                      return n;
+                    })
+                  }
+                  className={cx("flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition", inCart ? "border-slate-400 bg-slate-50" : "border-slate-100 hover:border-slate-300")}
+                  aria-expanded={isOpen}
+                >
+                  {vs.find((v) => v.image)?.image ? <img src={thumb(vs.find((v) => v.image)!.image)} alt="" className="h-12 w-12 rounded-xl object-cover" loading="lazy" /> : <span className="grid h-12 w-12 place-items-center rounded-xl bg-slate-100 font-bold text-slate-400">{e.family[0]}</span>}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13.5px] font-semibold text-slate-900">{e.family}</span>
+                    <span className="text-[12px] text-slate-500">
+                      from <b className="text-slate-800">{rupee(min)}</b> · {vs.length} options{inCart ? <b className="ml-1.5 text-slate-700">· {inCart} in order</b> : null}
+                    </span>
                   </span>
-                ) : (
-                  <Btn size="sm" kind="soft" disabled={out} onClick={() => bump(p, 1)} icon="plus">
-                    Add
-                  </Btn>
-                )}
-              </div>
-            </li>
+                  <Icon name="chevron" size={14} className={cx("shrink-0 text-slate-400 transition", isOpen ? "rotate-90" : "")} />
+                </button>
+              </li>
+              {isOpen && vs.map((v) => item(v, true))}
+            </Fragment>
           );
         })}
       </ul>

@@ -112,6 +112,8 @@ export function seedData(): { products: Product[]; coupons: Coupon[]; shopName: 
     eggless,
     tags,
     active: true,
+    family: "",
+    variant: "",
     createdAt: now + i,
     updatedAt: now + i,
   }];

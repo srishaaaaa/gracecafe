@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import type { AdminState, Product } from "@/lib/types";
 import { pointsPerUnit } from "@/lib/loyalty/engine";
 import { rupee } from "@/lib/money";
+import { entries, leftoverOf, priceRange, stockSummary } from "@/lib/variants";
 import { useAdmin } from "./Store";
 import { Badge, Btn, Empty, Field, Icon, Kpi, Modal, Page, PageHead, SearchBox, Switch, cx, inputCls, downloadExcel } from "./kit";
 
@@ -31,9 +32,20 @@ type Form = {
   image: string;
   tags: string[];
   active: boolean;
+  /** "This product has variants": `name` is then the family ("Popcorn") and each variant below is a real product */
+  hasVariants: boolean;
+  /** the family these variants were loaded from, so a removed variant can be deleted on save */
+  oldFamily: string;
+  variants: VForm[];
 };
 
-const EMPTY: Form = { name: "", category: "", price: "", track: true, stock: "10", lowAt: "4", loyaltyPoints: "", description: "", image: "", tags: [], active: true };
+/** One variant card in the form. Its price, stock, points, picture and menu switch are its own. */
+type VForm = { key: string; id?: string; name: string; price: string; track: boolean; stock: string; lowAt: string; loyaltyPoints: string; image: string; active: boolean };
+const newKey = () => Math.random().toString(36).slice(2, 9);
+const blankVariant = (): VForm => ({ key: newKey(), name: "", price: "", track: true, stock: "10", lowAt: "4", loyaltyPoints: "", image: "", active: true });
+const variantOf = (p: Product): VForm => ({ key: p.id, id: p.id, name: p.variant, price: String(p.price), track: p.stock !== null, stock: p.stock === null ? "10" : String(p.stock), lowAt: String(p.lowAt), loyaltyPoints: p.loyaltyPoints === null ? "" : String(p.loyaltyPoints), image: p.image, active: p.active });
+
+const EMPTY: Form = { name: "", category: "", price: "", track: true, stock: "10", lowAt: "4", loyaltyPoints: "", description: "", image: "", tags: [], active: true, hasVariants: false, oldFamily: "", variants: [] };
 const TAGS = [
   ["bestseller", "★ Bestseller"],
   ["new", "New"],
@@ -157,6 +169,66 @@ function ImageField({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
+/** The form card for one variant of a family. */
+function VariantCard({ v, i, family, admin, canRemove, hint, onChange, onRemove }: { v: VForm; i: number; family: string; admin: boolean; canRemove: boolean; hint: string; onChange: (v: VForm) => void; onRemove: () => void }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <b className="text-[13px] text-slate-900">
+          Variant {i + 1}
+          {v.name.trim() && <span className="ml-2 font-semibold text-slate-500">{family.trim() || "Product"} ({v.name.trim()})</span>}
+        </b>
+        <span className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-[12px] font-semibold text-slate-600">
+            On menu
+            <Switch on={v.active} onChange={(a) => onChange({ ...v, active: a })} label={`Variant ${i + 1} on the menu`} />
+          </label>
+          <button type="button" disabled={!canRemove} onClick={onRemove} className="grid h-8 w-8 place-items-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-30" aria-label={`Remove variant ${i + 1}`} title={canRemove ? "Remove this variant" : "A product needs at least one variant"}>
+            <Icon name="trash" size={14} />
+          </button>
+        </span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Variant name *">
+          <input className={inputCls} value={v.name} maxLength={40} onChange={(e) => onChange({ ...v, name: e.target.value })} placeholder="Small, Large, Masala…" />
+        </Field>
+        <Field label="Price (₹) *">
+          <input className={inputCls} type="number" min={0} step="0.5" value={v.price} onChange={(e) => onChange({ ...v, price: e.target.value })} placeholder="40" />
+        </Field>
+        <div className="rounded-xl border border-slate-100 p-3 sm:col-span-2">
+          <div className="flex items-center justify-between gap-3">
+            <b className="text-[12.5px] text-slate-800">Track stock</b>
+            <Switch on={v.track} onChange={(t) => onChange({ ...v, track: t })} label={`Track stock for variant ${i + 1}`} />
+          </div>
+          {v.track && (
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <Field label="In stock now">
+                <input className={inputCls} type="number" min={0} value={v.stock} onChange={(e) => onChange({ ...v, stock: e.target.value })} />
+              </Field>
+              <Field label="Low-stock alert at">
+                <input className={inputCls} type="number" min={0} value={v.lowAt} onChange={(e) => onChange({ ...v, lowAt: e.target.value })} />
+              </Field>
+            </div>
+          )}
+        </div>
+        {admin && (
+          <Field label="Loyalty points per item" className="sm:col-span-2" hint={hint}>
+            <input className={inputCls} type="number" min={0} step={1} inputMode="numeric" placeholder="Automatic" value={v.loyaltyPoints} onChange={(e) => onChange({ ...v, loyaltyPoints: e.target.value })} />
+          </Field>
+        )}
+        <Field label="Picture" className="sm:col-span-2">
+          <div className="flex items-start gap-3">
+            <span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-100">{v.image ? <img src={v.image} alt="" className="h-full w-full object-cover" /> : <span className="text-[10px] text-slate-400">No image</span>}</span>
+            <div className="min-w-0 flex-1">
+              <ImageField value={v.image} onChange={(img) => onChange({ ...v, image: img })} />
+            </div>
+          </div>
+        </Field>
+      </div>
+    </div>
+  );
+}
+
 type StockFilter = "all" | "menu" | "hidden" | "low" | "out";
 
 /* What the screen should show the instant a stock button is pressed; the server
@@ -217,6 +289,7 @@ export default function InventoryPage() {
   const [cat, setCat] = useState("All");
   const [filter, setFilter] = useState<StockFilter>("all");
   const [form, setForm] = useState<Form | null>(null);
+  const [openFams, setOpenFams] = useState<Set<string>>(new Set()); // families expanded in the list
   const [busy, setBusy] = useState(false);
   const [catEdit, setCatEdit] = useState<{ mode: "new" | "rename"; name: string } | null>(null);
   const [manageCats, setManageCats] = useState(false);
@@ -245,29 +318,68 @@ export default function InventoryPage() {
     return true;
   });
 
-  const open = (p?: Product) => {
+  const leftover = useMemo(() => leftoverOf(s.products), [s.products]);
+  const groups = useMemo(() => entries(list, false), [list]);
+  const toggleFam = (fam: string) =>
+    setOpenFams((cur) => {
+      const n = new Set(cur);
+      const k = fam.toLowerCase();
+      if (n.has(k)) n.delete(k);
+      else n.add(k);
+      return n;
+    });
+
+  const open = (p?: Product, fam?: Product[]) => {
     setCatEdit(null);
-    openForm(p);
+    openForm(p, fam);
   };
-  const openForm = (p?: Product) =>
+  const openForm = (p?: Product, fam?: Product[]) =>
     setForm(
-      p
+      fam && fam.length
         ? {
-            id: p.id,
-            name: p.name,
-            category: p.category,
-            price: String(p.price),
-            track: p.stock !== null,
-            stock: p.stock === null ? "10" : String(p.stock),
-            lowAt: String(p.lowAt),
-            loyaltyPoints: p.loyaltyPoints === null ? "" : String(p.loyaltyPoints),
-            description: p.description,
-            image: p.image,
-            tags: p.tags,
-            active: p.active,
+            ...EMPTY,
+            name: fam[0].family,
+            category: fam[0].category,
+            description: fam[0].description,
+            tags: fam[0].tags,
+            hasVariants: true,
+            oldFamily: fam[0].family,
+            variants: fam.map(variantOf),
           }
-        : { ...EMPTY, category: cat !== "All" ? cat : cats[0] ?? "" },
+        : p
+          ? {
+              id: p.id,
+              name: p.name,
+              category: p.category,
+              price: String(p.price),
+              track: p.stock !== null,
+              stock: p.stock === null ? "10" : String(p.stock),
+              lowAt: String(p.lowAt),
+              loyaltyPoints: p.loyaltyPoints === null ? "" : String(p.loyaltyPoints),
+              description: p.description,
+              image: p.image,
+              tags: p.tags,
+              active: p.active,
+              hasVariants: false,
+              oldFamily: "",
+              variants: [],
+            }
+          : { ...EMPTY, category: cat !== "All" ? cat : cats[0] ?? "" },
     );
+
+  /* The "This product has variants" switch. Turning it on keeps what is already typed as the first variant, so nothing is
+     duplicated; turning it off (only for a product that was never a family) brings the first variant back. */
+  const toggleVariants = (on: boolean) => {
+    if (!form) return;
+    if (on) {
+      const first: VForm = { key: newKey(), id: form.id, name: "", price: form.price, track: form.track, stock: form.stock, lowAt: form.lowAt, loyaltyPoints: form.loyaltyPoints, image: form.image, active: form.active };
+      setForm({ ...form, hasVariants: true, variants: [first, blankVariant()] });
+    } else {
+      const f = form.variants[0];
+      setForm({ ...form, hasVariants: false, variants: [], ...(f ? { id: f.id, price: f.price, track: f.track, stock: f.stock, lowAt: f.lowAt, loyaltyPoints: f.loyaltyPoints, image: f.image, active: f.active } : {}) });
+    }
+  };
+  const setVariant = (k: string, v: VForm) => form && setForm({ ...form, variants: form.variants.map((x) => (x.key === k ? v : x)) });
 
   const applyCat = () => {
     if (!catEdit || !form) return;
@@ -282,8 +394,8 @@ export default function InventoryPage() {
       {
         name: "Products",
         rows: [
-          ["Name", "Category", "Price", "Stock", "Low-stock alert at", "Status", "Loyalty points / item", "On menu", "Description"],
-          ...s.products.map((p) => [p.name, p.category, p.price, p.stock === null ? "Not tracked" : p.stock, p.stock === null ? "" : p.lowAt, p.stock === null ? "Always available" : p.stock <= 0 ? "Sold out" : p.stock <= p.lowAt ? "Low" : "In stock", p.loyaltyPoints === null ? "Automatic" : p.loyaltyPoints, p.active ? "Yes" : "No", p.description]),
+          ["Name", "Family", "Variant", "Category", "Price", "Stock", "Low-stock alert at", "Status", "Loyalty points / item", "On menu", "Description"],
+          ...s.products.map((p) => [p.name, p.family, p.variant, p.category, p.price, p.stock === null ? "Not tracked" : p.stock, p.stock === null ? "" : p.lowAt, p.stock === null ? "Always available" : p.stock <= 0 ? "Sold out" : p.stock <= p.lowAt ? "Low" : "In stock", p.loyaltyPoints === null ? "Automatic" : p.loyaltyPoints, p.active ? "Yes" : "No", p.description]),
         ],
       },
     ]);
@@ -349,13 +461,88 @@ export default function InventoryPage() {
   const save = async () => {
     if (!form) return;
     setBusy(true);
-    const r = await act<Product>("product.save", { ...form, stock: form.track ? form.stock : null });
+    if (form.hasVariants) {
+      const r = await act<Product[]>("product.family.save", {
+        family: form.name.trim(),
+        oldFamily: form.oldFamily,
+        category: form.category,
+        description: form.description,
+        tags: form.tags,
+        variants: form.variants.map((v) => ({ id: v.id, name: v.name.trim(), price: v.price, stock: v.track ? v.stock : null, lowAt: v.lowAt, image: v.image, active: v.active, loyaltyPoints: v.loyaltyPoints })),
+      });
+      setBusy(false);
+      if (r.ok) {
+        toast({ kind: "ok", title: `${form.name.trim()} saved with ${form.variants.length} variant${form.variants.length === 1 ? "" : "s"}` });
+        setForm(null);
+      }
+      return;
+    }
+    const r = await act<Product>("product.save", { ...form, stock: form.track ? form.stock : null, family: "", variant: "" });
     setBusy(false);
     if (r.ok) {
       if (!r.pending) toast({ kind: "ok", title: form.id ? `${r.result.name} saved` : `${r.result.name} added${r.result.active ? " to the menu" : ""}` });
       setForm(null);
     }
   };
+
+  /* one product row — a variant is shown the same way, indented under its family */
+  const row = (p: Product, nested: boolean) => (
+                <tr key={p.id} className={cx("border-b border-slate-100 last:border-0 hover:bg-slate-50/50", !p.active && "opacity-60", nested && "bg-white")}>
+                  <td className={td}>
+                    <div className={cx("flex items-center gap-3", nested && "pl-9")}>
+                      {p.image ? <img src={thumb(p.image)} alt="" className="h-11 w-11 rounded-xl object-cover" loading="lazy" /> : <span className="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 font-bold text-slate-400">{(nested ? p.variant : p.name)[0]}</span>}
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-2 font-semibold text-slate-900">
+                          {nested ? p.variant : p.name}
+                          {!nested && leftover(p) && <Badge tone="slate">Hidden from sale</Badge>}
+                        </p>
+                        <p className="mt-0.5 flex flex-wrap gap-1">
+                          {p.tags.map((t) => (
+                            <Badge key={t} tone={t === "bestseller" ? "amber" : "violet"}>
+                              {t}
+                            </Badge>
+                          ))}
+                          {p.stock !== null && p.stock <= 0 ? <Badge tone="red">Sold out</Badge> : p.stock !== null && p.stock <= p.lowAt ? <Badge tone="amber">Low</Badge> : null}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className={cx(td, "text-slate-600")}>{p.category}</td>
+                  <td className={cx(td, "font-bold text-slate-900")}>{rupee(p.price)}</td>
+                  <td className={td}>
+                    <StockCell p={p} />
+                  </td>
+                  <td className={td}>
+                    <Switch on={p.active} onChange={() => act("product.toggle", { id: p.id })} label={`${p.name} on the menu`} />
+                  </td>
+                  <td className={cx(td, "text-right")}>
+                    <span className="inline-flex gap-1">
+                      {p.stock !== null && (
+                        <Btn size="sm" kind="plain" icon="box" onClick={() => setMove({ p, dir: "added", qty: "", note: "" })}>
+                          Stock in/out
+                        </Btn>
+                      )}
+                      <Btn size="sm" kind="plain" icon="edit" onClick={() => (p.family ? open(undefined, s.products.filter((v) => v.family.toLowerCase() === p.family.toLowerCase())) : open(p))} disabled={!!p.family && role !== "admin"} title={p.family && role !== "admin" ? "Only the admin can edit variants" : undefined}>
+                        Edit
+                      </Btn>
+                      {role === "admin" && (
+                      <Btn
+                        size="sm"
+                        kind="plain"
+                        className="text-red-600 hover:bg-red-50"
+                        onClick={async () => {
+                          if (await confirm({ title: `Delete ${p.name}?`, body: "It disappears from the menu and catalog, and its stock movement history is deleted too. Past orders and bills keep their copy of what was sold. To hide it for a while, switch “On menu” off instead.", ok: "Delete", danger: true }))
+                            act("product.delete", { id: p.id });
+                        }}
+                        aria-label={`Delete ${p.name}`}
+                      >
+                        <Icon name="trash" size={14} />
+                      </Btn>
+                      )}
+                    </span>
+                  </td>
+                </tr>
+  );
 
   return (
     <Page>
@@ -464,62 +651,64 @@ export default function InventoryPage() {
               </tr>
             </thead>
             <tbody>
-              {list.map((p) => (
-                <tr key={p.id} className={cx("border-b border-slate-100 last:border-0 hover:bg-slate-50/50", !p.active && "opacity-60")}>
-                  <td className={td}>
-                    <div className="flex items-center gap-3">
-                      {p.image ? <img src={thumb(p.image)} alt="" className="h-11 w-11 rounded-xl object-cover" loading="lazy" /> : <span className="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 font-bold text-slate-400">{p.name[0]}</span>}
-                      <div className="min-w-0">
-                        <p className="flex items-center gap-2 font-semibold text-slate-900">
-                          {p.name}
-                        </p>
-                        <p className="mt-0.5 flex flex-wrap gap-1">
-                          {p.tags.map((t) => (
-                            <Badge key={t} tone={t === "bestseller" ? "amber" : "violet"}>
-                              {t}
-                            </Badge>
-                          ))}
-                          {p.stock !== null && p.stock <= 0 ? <Badge tone="red">Sold out</Badge> : p.stock !== null && p.stock <= p.lowAt ? <Badge tone="amber">Low</Badge> : null}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className={cx(td, "text-slate-600")}>{p.category}</td>
-                  <td className={cx(td, "font-bold text-slate-900")}>{rupee(p.price)}</td>
-                  <td className={td}>
-                    <StockCell p={p} />
-                  </td>
-                  <td className={td}>
-                    <Switch on={p.active} onChange={() => act("product.toggle", { id: p.id })} label={`${p.name} on the menu`} />
-                  </td>
-                  <td className={cx(td, "text-right")}>
-                    <span className="inline-flex gap-1">
-                      {p.stock !== null && (
-                        <Btn size="sm" kind="plain" icon="box" onClick={() => setMove({ p, dir: "added", qty: "", note: "" })}>
-                          Stock in/out
-                        </Btn>
-                      )}
-                      <Btn size="sm" kind="plain" icon="edit" onClick={() => open(p)}>
-                        Edit
-                      </Btn>
-                      {role === "admin" && (
-                      <Btn
-                        size="sm"
-                        kind="plain"
-                        className="text-red-600 hover:bg-red-50"
-                        onClick={async () => {
-                          if (await confirm({ title: `Delete ${p.name}?`, body: "It disappears from the menu and catalog, and its stock movement history is deleted too. Past orders and bills keep their copy of what was sold. To hide it for a while, switch “On menu” off instead.", ok: "Delete", danger: true }))
-                            act("product.delete", { id: p.id });
-                        }}
-                        aria-label={`Delete ${p.name}`}
-                      >
-                        <Icon name="trash" size={14} />
-                      </Btn>
-                      )}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {groups.map((e) => {
+                if (e.family === null) return row(e.item, false);
+                const items = e.items;
+                const fam = e.family;
+                const isOpen = openFams.has(fam.toLowerCase());
+                const { min, max } = priceRange(items);
+                const sum = stockSummary(items);
+                const menuN = items.filter((v) => v.active).length;
+                const all = s.products.filter((v) => v.family.toLowerCase() === fam.toLowerCase());
+                return (
+                  <Fragment key={"fam:" + fam}>
+                    <tr className={cx("cursor-pointer border-b border-slate-100 bg-slate-50/40 hover:bg-slate-50", menuN === 0 && "opacity-60")} onClick={() => toggleFam(fam)}>
+                      <td className={td}>
+                        <div className="flex items-center gap-3">
+                          <Icon name="chevron" size={14} className={cx("shrink-0 text-slate-400 transition", isOpen ? "rotate-90" : "")} />
+                          {items[0].image ? <img src={thumb(items[0].image)} alt="" className="h-11 w-11 rounded-xl object-cover" loading="lazy" /> : <span className="grid h-11 w-11 place-items-center rounded-xl bg-slate-100 font-bold text-slate-400">{fam[0]}</span>}
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-900">{fam}</p>
+                            <p className="mt-0.5 flex flex-wrap gap-1">
+                              <Badge tone="sky">{items.length} variant{items.length === 1 ? "" : "s"}</Badge>
+                              {sum.out > 0 && <Badge tone="red">{sum.out} sold out</Badge>}
+                              {sum.low > 0 && <Badge tone="amber">{sum.low} low</Badge>}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className={cx(td, "text-slate-600")}>{items[0].category}</td>
+                      <td className={cx(td, "font-bold text-slate-900")}>{min === max ? rupee(min) : `${rupee(min)} – ${rupee(max)}`}</td>
+                      <td className={td}>{sum.total === null ? <span className="text-slate-400">∞ untracked</span> : <b className="adm-num text-[14px] text-slate-900">{sum.total} <span className="text-[11px] font-semibold text-slate-400">total</span></b>}</td>
+                      <td className={cx(td, "text-[12px] font-semibold text-slate-500")}>{menuN} of {items.length} on menu</td>
+                      <td className={cx(td, "text-right")} onClick={(ev) => ev.stopPropagation()}>
+                        <span className="inline-flex gap-1">
+                          {role === "admin" && (
+                            <Btn size="sm" kind="plain" icon="edit" onClick={() => open(undefined, all)}>
+                              Edit
+                            </Btn>
+                          )}
+                          {role === "admin" && (
+                            <Btn
+                              size="sm"
+                              kind="plain"
+                              className="text-red-600 hover:bg-red-50"
+                              onClick={async () => {
+                                if (await confirm({ title: `Delete ${fam} and its ${all.length} variants?`, body: "Every variant disappears from the menu and catalog, and their stock movement history is deleted too. Past orders and bills keep their copy of what was sold. To hide them for a while, switch “On menu” off instead.", ok: "Delete all", danger: true }))
+                                  for (const v of all) await act("product.delete", { id: v.id });
+                              }}
+                              aria-label={`Delete ${fam}`}
+                            >
+                              <Icon name="trash" size={14} />
+                            </Btn>
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+                    {isOpen && items.map((v) => row(v, true))}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
           {!list.length && (
@@ -690,13 +879,13 @@ export default function InventoryPage() {
       <Modal
         open={!!form}
         onClose={() => setForm(null)}
-        title={form?.id ? "Edit product" : "Add product"}
+        title={form?.id || form?.oldFamily ? "Edit product" : "Add product"}
         wide
         footer={
           <>
             <Btn onClick={() => setForm(null)}>Cancel</Btn>
-            <Btn kind="red" disabled={busy || !form?.name.trim() || form?.price === ""} onClick={save}>
-              {form?.id ? "Save product" : "Add product"}
+            <Btn kind="red" disabled={busy || !form?.name.trim() || (form?.hasVariants ? !form.variants.length || form.variants.some((v) => !v.name.trim() || v.price === "") : form?.price === "")} onClick={save}>
+              {form?.id || form?.oldFamily ? "Save product" : "Add product"}
             </Btn>
           </>
         }
@@ -705,8 +894,17 @@ export default function InventoryPage() {
           <div className="grid gap-5 md:grid-cols-[1fr_220px]">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Name *" className="sm:col-span-2">
-                <input className={inputCls} value={form.name} maxLength={80} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Crispy Veg Burger" />
+                <input className={inputCls} value={form.name} maxLength={form.hasVariants ? 60 : 80} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={form.hasVariants ? "Popcorn" : "Crispy Veg Burger"} />
               </Field>
+              {role === "admin" && (
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 p-4 sm:col-span-2">
+                  <span>
+                    <b className="block text-[13px] text-slate-800">This product has variants</b>
+                    <span className="text-[12px] text-slate-500">Like Popcorn in Small, Regular and Large — each with its own picture, price, stock, alert and loyalty points.</span>
+                  </span>
+                  <Switch on={form.hasVariants} onChange={toggleVariants} label="This product has variants" />
+                </div>
+              )}
               <Field label="Category *">
                 <select className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                   {!form.category && <option value="">Select category…</option>}
@@ -734,6 +932,8 @@ export default function InventoryPage() {
                   </div>
                 )}
               </Field>
+              {!form.hasVariants && (
+                <>
               <Field label="Price (₹) *">
                 <input className={inputCls} type="number" min={0} step="0.5" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="140" />
               </Field>
@@ -767,21 +967,50 @@ export default function InventoryPage() {
               ) : (
                 <p className="rounded-xl bg-slate-50 px-4 py-2.5 text-[12.5px] text-slate-500 sm:col-span-2">Loyalty points for this item are set by the admin.</p>
               )}
+                </>
+              )}
               <Field label="Description" className="sm:col-span-2">
                 <textarea className={cx(inputCls, "h-20 resize-none py-3")} maxLength={240} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="One line that makes it irresistible." />
               </Field>
-              <Field label="Image" className="sm:col-span-2" hint="Upload one photo (JPEG, PNG, WebP or GIF, up to 4 MB) or paste a link.">
-                <ImageField value={form.image} onChange={(v) => setForm({ ...form, image: v })} />
-              </Field>
+              {!form.hasVariants ? (
+                <Field label="Image" className="sm:col-span-2" hint="Upload one photo (JPEG, PNG, WebP or GIF, up to 4 MB) or paste a link.">
+                  <ImageField value={form.image} onChange={(v) => setForm({ ...form, image: v })} />
+                </Field>
+              ) : (
+                <div className="space-y-3 sm:col-span-2">
+                  <span className="block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-600">Variants — e.g. Small, Regular, Large</span>
+                  {form.variants.map((v, i) => (
+                    <VariantCard
+                      key={v.key}
+                      v={v}
+                      i={i}
+                      family={form.name}
+                      admin={role === "admin"}
+                      canRemove={form.variants.length > 1}
+                      hint={`Points one ${v.name.trim() || "item"} earns a member. Blank = automatic.`}
+                      onChange={(nv) => setVariant(v.key, nv)}
+                      onRemove={() => setForm({ ...form, variants: form.variants.filter((x) => x.key !== v.key) })}
+                    />
+                  ))}
+                  <button type="button" onClick={() => setForm({ ...form, variants: [...form.variants, blankVariant()] })} className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 text-[13px] font-bold text-slate-700 hover:bg-slate-50">
+                    <Icon name="plus" size={14} /> Add variant
+                  </button>
+                  {form.oldFamily && <p className="text-[12px] text-slate-500">A variant you remove here is deleted when you save, together with its stock history. Past bills keep their copy.</p>}
+                </div>
+              )}
             </div>
             <div className="space-y-4">
-              <div className="aspect-square overflow-hidden rounded-2xl bg-slate-100">
-                {form.image ? <img src={form.image} alt="" className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center text-[12px] text-slate-400">No image</span>}
-              </div>
-              <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-100 p-3 text-[13px] font-semibold text-slate-700">
-                Show on menu
-                <Switch on={form.active} onChange={(v) => setForm({ ...form, active: v })} label="Show on menu" />
-              </label>
+              {!form.hasVariants && (
+                <>
+                  <div className="aspect-square overflow-hidden rounded-2xl bg-slate-100">
+                    {form.image ? <img src={form.image} alt="" className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center text-[12px] text-slate-400">No image</span>}
+                  </div>
+                  <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-100 p-3 text-[13px] font-semibold text-slate-700">
+                    Show on menu
+                    <Switch on={form.active} onChange={(v) => setForm({ ...form, active: v })} label="Show on menu" />
+                  </label>
+                </>
+              )}
               <div className="flex flex-wrap gap-2">
                 {TAGS.map(([t, label]) => {
                   const on = form.tags.includes(t);
