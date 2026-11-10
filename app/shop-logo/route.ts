@@ -16,6 +16,6 @@ export async function GET(req: Request) {
   const m = /^data:(image\/(?:png|jpeg|webp));base64,(.+)$/.exec(logo);
   if (m) return new Response(Buffer.from(m[2], "base64"), { headers: { "Content-Type": m[1], "Cache-Control": CACHE } });
   if (/^https?:\/\//i.test(logo)) return Response.redirect(logo, 302);
-  void FALLBACK; // the built-in picture is now the 8:2 logo
+  void FALLBACK; // the built-in picture is now the Grace Cafe logo
   return Response.redirect(new URL("/logo.png", req.url), 302);
 }

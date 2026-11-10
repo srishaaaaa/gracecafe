@@ -629,6 +629,7 @@ export function downloadExcel(name: string, sheetsOrRows: ExcelSheet[] | (string
     ? [{ name: "Sheet1", rows: sheetsOrRows as (string | number | null | undefined)[][] }]
     : (sheetsOrRows as ExcelSheet[]);
   const xml = excelWorkbook(sheets);
-  const file = name.endsWith(".xls") || name.endsWith(".xlsx") ? name : `${name}.xls`;
+  // the content is SpreadsheetML 2003 XML, so the file is honestly an .xls (an .xlsx name makes Excel warn that the format does not match)
+  const file = `${name.replace(/\.xlsx?$/, "")}.xls`;
   downloadText(file, xml, "application/vnd.ms-excel;charset=utf-8");
 }

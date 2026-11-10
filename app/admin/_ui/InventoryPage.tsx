@@ -169,62 +169,89 @@ function ImageField({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-/** The form card for one variant of a family. */
-function VariantCard({ v, i, family, admin, canRemove, hint, onChange, onRemove }: { v: VForm; i: number; family: string; admin: boolean; canRemove: boolean; hint: string; onChange: (v: VForm) => void; onRemove: () => void }) {
+/** The form card for one variant of a family — a 12-column grid that fills the form's width (2 columns on phones). */
+function VariantCard({ v, i, family, admin, canRemove, autoPts, onChange, onRemove }: { v: VForm; i: number; family: string; admin: boolean; canRemove: boolean; autoPts: number; onChange: (v: VForm) => void; onRemove: () => void }) {
+  const lab = "mb-1 block text-[11px] font-bold uppercase tracking-[0.12em] text-slate-600";
+  const box = "flex h-10 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3.5";
+  const word = "text-[13px] font-semibold text-slate-700";
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <b className="text-[13px] text-slate-900">
+        <span className="min-w-0 truncate text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400">
           Variant {i + 1}
-          {v.name.trim() && <span className="ml-2 font-semibold text-slate-500">{family.trim() || "Product"} ({v.name.trim()})</span>}
-        </b>
-        <span className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-[12px] font-semibold text-slate-600">
-            On menu
-            <Switch on={v.active} onChange={(a) => onChange({ ...v, active: a })} label={`Variant ${i + 1} on the menu`} />
-          </label>
-          <button type="button" disabled={!canRemove} onClick={onRemove} className="grid h-8 w-8 place-items-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-30" aria-label={`Remove variant ${i + 1}`} title={canRemove ? "Remove this variant" : "A product needs at least one variant"}>
-            <Icon name="trash" size={14} />
-          </button>
+          {v.name.trim() && <span className="ml-2 normal-case tracking-normal text-slate-500">· {family.trim() || "Product"} ({v.name.trim()})</span>}
         </span>
+        <Btn size="sm" kind="plain" icon="trash" className="text-red-600 hover:bg-red-50" disabled={!canRemove} onClick={onRemove} title={canRemove ? "Remove this variant" : "A product needs at least one variant"}>
+          Remove
+        </Btn>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Variant name *">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-12">
+        {/* row 1 */}
+        <Field label="Variant name *" className="col-span-2 md:col-span-5">
           <input className={inputCls} value={v.name} maxLength={40} onChange={(e) => onChange({ ...v, name: e.target.value })} placeholder="Small, Large, Masala…" />
         </Field>
-        <Field label="Price (₹) *">
+        <Field label="Price (₹) *" className="md:col-span-3">
           <input className={inputCls} type="number" min={0} step="0.5" value={v.price} onChange={(e) => onChange({ ...v, price: e.target.value })} placeholder="40" />
         </Field>
-        <div className="rounded-xl border border-slate-100 p-3 sm:col-span-2">
-          <div className="flex items-center justify-between gap-3">
-            <b className="text-[12.5px] text-slate-800">Track stock</b>
+        {admin ? (
+          <Field label="Loyalty points" className="md:col-span-4" hint={`Blank = automatic (${autoPts} pts)`}>
+            <input className={inputCls} type="number" min={0} step={1} inputMode="numeric" placeholder={`Automatic (${autoPts})`} value={v.loyaltyPoints} onChange={(e) => onChange({ ...v, loyaltyPoints: e.target.value })} />
+          </Field>
+        ) : (
+          <p className="self-end rounded-xl bg-slate-50 px-3.5 py-2.5 text-[12px] text-slate-500 md:col-span-4">Loyalty points are set by the admin</p>
+        )}
+
+        {/* row 2 */}
+        <div className={cx(v.track ? "md:col-span-3" : "md:col-span-6")}>
+          <span className={lab}>Track stock</span>
+          <div className={box}>
+            <span className={word}>{v.track ? "On" : "Off"}</span>
             <Switch on={v.track} onChange={(t) => onChange({ ...v, track: t })} label={`Track stock for variant ${i + 1}`} />
           </div>
-          {v.track && (
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <Field label="In stock now">
-                <input className={inputCls} type="number" min={0} value={v.stock} onChange={(e) => onChange({ ...v, stock: e.target.value })} />
-              </Field>
-              <Field label="Low-stock alert at">
-                <input className={inputCls} type="number" min={0} value={v.lowAt} onChange={(e) => onChange({ ...v, lowAt: e.target.value })} />
-              </Field>
-            </div>
-          )}
         </div>
-        {admin && (
-          <Field label="Loyalty points per item" className="sm:col-span-2" hint={hint}>
-            <input className={inputCls} type="number" min={0} step={1} inputMode="numeric" placeholder="Automatic" value={v.loyaltyPoints} onChange={(e) => onChange({ ...v, loyaltyPoints: e.target.value })} />
-          </Field>
+        {v.track && (
+          <>
+            <Field label="In stock now" className="md:col-span-3">
+              <input className={inputCls} type="number" min={0} value={v.stock} onChange={(e) => onChange({ ...v, stock: e.target.value })} />
+            </Field>
+            <Field label="Low stock at" className="md:col-span-3">
+              <input className={inputCls} type="number" min={0} value={v.lowAt} onChange={(e) => onChange({ ...v, lowAt: e.target.value })} />
+            </Field>
+          </>
         )}
-        <Field label="Picture" className="sm:col-span-2">
-          <div className="flex items-start gap-3">
-            <span className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-100">{v.image ? <img src={v.image} alt="" className="h-full w-full object-cover" /> : <span className="text-[10px] text-slate-400">No image</span>}</span>
-            <div className="min-w-0 flex-1">
-              <ImageField value={v.image} onChange={(img) => onChange({ ...v, image: img })} />
-            </div>
+        <div className={cx(v.track ? "md:col-span-3" : "md:col-span-6")}>
+          <span className={lab}>On menu</span>
+          <div className={box}>
+            <span className={word}>{v.active ? "Visible" : "Hidden"}</span>
+            <Switch on={v.active} onChange={(a) => onChange({ ...v, active: a })} label={`Variant ${i + 1} on the menu`} />
           </div>
-        </Field>
+        </div>
+
+        {/* row 3 */}
+        <div className="col-span-2 flex items-start gap-3 md:col-span-12">
+          <span className="grid h-[84px] w-[84px] shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-100">{v.image ? <img src={v.image} alt="" className="h-full w-full object-cover" /> : <span className="text-[10px] text-slate-400">No image</span>}</span>
+          <div className="min-w-0 flex-1">
+            <span className={lab}>Image</span>
+            <ImageField value={v.image} onChange={(img) => onChange({ ...v, image: img })} />
+          </div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+/** Bestseller / New chips. */
+function TagChips({ tags, onChange }: { tags: string[]; onChange: (t: string[]) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {TAGS.map(([t, label]) => {
+        const on = tags.includes(t);
+        return (
+          <button key={t} type="button" onClick={() => onChange(on ? tags.filter((x) => x !== t) : [...tags, t])} className={cx("h-8 rounded-full px-3 text-[12px] font-bold transition", on ? "bg-amber-400 text-amber-950" : "bg-slate-100 text-slate-500")}>
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -394,8 +421,8 @@ export default function InventoryPage() {
       {
         name: "Products",
         rows: [
-          ["Name", "Family", "Variant", "Category", "Price", "Stock", "Low-stock alert at", "Status", "Loyalty points / item", "On menu", "Description"],
-          ...s.products.map((p) => [p.name, p.family, p.variant, p.category, p.price, p.stock === null ? "Not tracked" : p.stock, p.stock === null ? "" : p.lowAt, p.stock === null ? "Always available" : p.stock <= 0 ? "Sold out" : p.stock <= p.lowAt ? "Low" : "In stock", p.loyaltyPoints === null ? "Automatic" : p.loyaltyPoints, p.active ? "Yes" : "No", p.description]),
+          ["Name", "Product", "Variant", "Category", "Price", "Stock", "Low-stock alert at", "Status", "Loyalty points / item", "On menu", "Description"],
+          ...s.products.map((p) => [p.name, p.family || p.name, p.variant, p.category, p.price, p.stock === null ? "Not tracked" : p.stock, p.stock === null ? "" : p.lowAt, p.stock === null ? "Always available" : p.stock <= 0 ? "Sold out" : p.stock <= p.lowAt ? "Low" : "In stock", p.loyaltyPoints === null ? "Automatic" : p.loyaltyPoints, p.active ? "Yes" : "No", p.description]),
         ],
       },
     ]);
@@ -891,7 +918,7 @@ export default function InventoryPage() {
         }
       >
         {form && (
-          <div className="grid gap-5 md:grid-cols-[1fr_220px]">
+          <div className={cx("grid gap-5", !form.hasVariants && "md:grid-cols-[1fr_220px]")}>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Name *" className="sm:col-span-2">
                 <input className={inputCls} value={form.name} maxLength={form.hasVariants ? 60 : 80} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={form.hasVariants ? "Popcorn" : "Crispy Veg Burger"} />
@@ -987,7 +1014,7 @@ export default function InventoryPage() {
                       family={form.name}
                       admin={role === "admin"}
                       canRemove={form.variants.length > 1}
-                      hint={`Points one ${v.name.trim() || "item"} earns a member. Blank = automatic.`}
+                      autoPts={pointsPerUnit({ id: v.id ?? "", category: form.category, price: Number(v.price) || 0, loyaltyPoints: null }, s.loyaltyEarn)}
                       onChange={(nv) => setVariant(v.key, nv)}
                       onRemove={() => setForm({ ...form, variants: form.variants.filter((x) => x.key !== v.key) })}
                     />
@@ -996,37 +1023,22 @@ export default function InventoryPage() {
                     <Icon name="plus" size={14} /> Add variant
                   </button>
                   {form.oldFamily && <p className="text-[12px] text-slate-500">A variant you remove here is deleted when you save, together with its stock history. Past bills keep their copy.</p>}
+                  <TagChips tags={form.tags} onChange={(t) => setForm({ ...form, tags: t })} />
                 </div>
               )}
             </div>
-            <div className="space-y-4">
-              {!form.hasVariants && (
-                <>
-                  <div className="aspect-square overflow-hidden rounded-2xl bg-slate-100">
-                    {form.image ? <img src={form.image} alt="" className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center text-[12px] text-slate-400">No image</span>}
-                  </div>
-                  <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-100 p-3 text-[13px] font-semibold text-slate-700">
-                    Show on menu
-                    <Switch on={form.active} onChange={(v) => setForm({ ...form, active: v })} label="Show on menu" />
-                  </label>
-                </>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {TAGS.map(([t, label]) => {
-                  const on = form.tags.includes(t);
-                  return (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setForm({ ...form, tags: on ? form.tags.filter((x) => x !== t) : [...form.tags, t] })}
-                      className={cx("h-8 rounded-full px-3 text-[12px] font-bold transition", on ? "bg-amber-400 text-amber-950" : "bg-slate-100 text-slate-500")}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
+            {!form.hasVariants && (
+              <div className="space-y-4">
+                <div className="aspect-square overflow-hidden rounded-2xl bg-slate-100">
+                  {form.image ? <img src={form.image} alt="" className="h-full w-full object-cover" /> : <span className="grid h-full place-items-center text-[12px] text-slate-400">No image</span>}
+                </div>
+                <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-100 p-3 text-[13px] font-semibold text-slate-700">
+                  Show on menu
+                  <Switch on={form.active} onChange={(v) => setForm({ ...form, active: v })} label="Show on menu" />
+                </label>
+                <TagChips tags={form.tags} onChange={(t) => setForm({ ...form, tags: t })} />
               </div>
-            </div>
+            )}
           </div>
         )}
       </Modal>

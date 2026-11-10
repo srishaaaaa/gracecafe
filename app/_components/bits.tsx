@@ -122,7 +122,7 @@ export function Barcode({ digits }: { digits: string }) {
 }
 
 /* ---------- icons ---------- */
-/* the 8:2 logo in beige, straight on the menu's dark bands */
+/* the Grace Cafe logo, straight on the menu's dark bands */
 export const Cherry = ({ size = 22 }: { size?: number }) => (
   // eslint-disable-next-line @next/next/no-img-element
   <img src="/logo.png" alt="" style={{ height: size + 6, width: "auto", display: "inline-block", verticalAlign: "middle" }} />

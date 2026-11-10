@@ -235,7 +235,7 @@ export default function CakeLab() {
 
   /* ---------- WhatsApp order ---------- */
   const lines = [
-    "Hi Chef Loving Cakes! I'd love to order a cake 🎂",
+    "Hi Grace Cafe! I would like to order a cake 🎂",
     `• Occasion: ${cfg.occasion}`,
     `• Tiers: ${cfg.tiers}`,
     `• Sponge: ${sponge.label}`,
@@ -246,7 +246,7 @@ export default function CakeLab() {
     "",
     "(Designed in your Cake Lab)",
   ];
-  const wa = `https://wa.me/918056895352?text=${encodeURIComponent(lines.join("\n"))}`;
+  const wa = `https://wa.me/919042001476?text=${encodeURIComponent(lines.join("\n"))}`;
   const ticketNo = hashCfg(cfg);
 
   const tierKey = `t${cfg.tiers}`;
@@ -258,7 +258,7 @@ export default function CakeLab() {
         <div className={`lab__board ${pulse ? "is-pulse" : ""}`} key={`pulse${pulse}`} ref={boardRef}>
           <div className="lab__corner lab__corner--tl">Spec sheet · Nº {ticketNo}</div>
           <div className="lab__corner lab__corner--tr">For: {cfg.occasion}</div>
-          <div className="lab__corner lab__corner--bl">Scale 1:4 · Kodaikanal</div>
+          <div className="lab__corner lab__corner--bl">Scale 1:4 · Valliyur</div>
 
           <svg className="lab__svg" viewBox="0 0 480 470" role="img" aria-label={`Preview: ${cfg.tiers}-tier ${sponge.label} cake with ${fin.label}`}>
             <defs>
@@ -635,7 +635,7 @@ export default function CakeLab() {
             </button>
           </div>
           <p className="ticket__fine">
-            Opens WhatsApp with your design filled in. Prefer talking? <a href="tel:+918056895352"><Phone size={13} /> 80568 95352</a>
+            Opens WhatsApp with your design filled in. Prefer talking? <a href="tel:+919042001476"><Phone size={13} /> 90420 01476</a>
           </p>
         </div>
       </div>

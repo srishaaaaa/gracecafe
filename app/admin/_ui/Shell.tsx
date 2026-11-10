@@ -27,7 +27,7 @@ const NAV: Nav[] = [
   { href: "/admin/birthdays", label: "Birthdays", icon: "cake", roles: ["admin", "staff"] },
 ];
 
-/* The shop logo. The built-in 8:2 mark is shown in beige straight on the dark sidebar; a logo uploaded in Settings
+/* The shop logo. The built-in Grace Cafe mark is shown in beige straight on the dark sidebar; a logo uploaded in Settings
    keeps a light tile behind it so it can be seen. */
 const Cherry = ({ logo }: { logo?: string }) =>
   !logo || logo === "/logo.png" ? (

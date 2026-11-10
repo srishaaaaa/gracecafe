@@ -484,7 +484,7 @@ export type ShopDetails = {
 
 export type Settings = ShopDetails & {
   shopName: string;
-  /** origin printed into QR codes, e.g. https://order.cheflovingcakes.in */
+  /** origin printed into QR codes, e.g. https://gracecafe.vercel.app */
   publicUrl: string;
   /** When true, POS Billing is counter-only — the customer-tab flow is hidden. */
   walkInsOnly: boolean;
