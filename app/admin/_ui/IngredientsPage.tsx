@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { INGREDIENT_UNITS, type Batch, type Ingredient, type IngredientUnit, type Product, type Recipe } from "@/lib/types";
 import { rupee } from "@/lib/money";
@@ -531,9 +530,6 @@ export default function IngredientsPage() {
         sub="Raw stores (sugar, milk, flour…) by weight or volume. Log purchases, record batches, flag waste."
         right={
           <>
-            <Link href="/admin/inventory/ingredient-moves" className="inline-flex h-9 items-center gap-2 rounded-xl bg-slate-100 px-3.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-200">
-              <Icon name="list" size={16} /> Movements log
-            </Link>
             <Btn kind="soft" icon="download" disabled={!ings.length} onClick={() => downloadExcel(`ingredients-${new Date().toISOString().slice(0, 10)}.xlsx`, [{ name: "Ingredients", rows: [["Ingredient", "Unit", "In stock", "Low-stock warning", "Cost per unit", "Stock value", "Status"], ...ings.filter((i) => i.active).map((i) => [i.name, i.unit, i.stock, i.lowAt, i.costPerUnit, Math.round(i.stock * i.costPerUnit * 100) / 100, i.stock <= 0 ? "Out" : i.lowAt > 0 && i.stock <= i.lowAt ? "Low" : "OK"])] }])}>Excel</Btn>
             <Btn kind="soft" icon="plus" onClick={() => setEdit(EMPTY_ING)}>New ingredient</Btn>
             <Btn kind="dark" icon="orders" onClick={() => setBatchOpen(true)} disabled={active.length === 0} title={active.length === 0 ? "Add an ingredient first" : "Log a batch"}>Log a batch</Btn>

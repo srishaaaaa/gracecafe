@@ -181,75 +181,6 @@ export type Expense = {
   createdAt: number;
 };
 
-export type ActivityRow = { id: string; actor: "admin" | "staff"; action: string; target: string; outcome: "done" | "requested"; createdAt: number };
-
-/** Plain-words names for what was done (anything not listed shows its code, tidied). */
-export const ACTIVITY_LABELS: Record<string, string> = {
-  "settings.update": "Changed shop settings",
-  "user.promote": "Made a staff user an admin",
-  "user.demote": "Made an admin a staff user",
-  "tab.clear": "Cleared a customer tab",
-  "session.update": "Edited a customer tab",
-  "order.create": "Created an order",
-  "order.status": "Changed an order's status",
-  "product.save": "Saved a product",
-  "product.delete": "Deleted a product",
-  "product.family.save": "Saved a product with variants",
-  "product.stock": "Changed a product's stock",
-  "product.toggle": "Switched a product on/off the menu",
-  "category.rename": "Renamed a category",
-  "category.add": "Added a category",
-  "category.delete": "Removed a category",
-  "ingredient.save": "Saved an ingredient",
-  "ingredient.delete": "Removed an ingredient",
-  "ingredient.purchase": "Bought ingredient stock",
-  "ingredient.waste": "Logged ingredient waste",
-  "ingredient.adjust": "Adjusted ingredient stock",
-  "recipe.save": "Saved a recipe",
-  "recipe.delete": "Removed a recipe",
-  "batch.save": "Logged a batch",
-  "coupon.save": "Saved a coupon",
-  "coupon.send": "Sent a coupon",
-  "coupon.delete": "Deleted a coupon",
-  "expense.save": "Saved an expense",
-  "expense.delete": "Deleted an expense",
-  "expcat.save": "Saved an expense category",
-  "expcat.delete": "Deleted an expense category",
-  "supplier.save": "Saved a supplier",
-  "supplier.delete": "Deleted a supplier",
-  "supplierinv.save": "Saved a supplier invoice",
-  "supplierinv.delete": "Deleted a supplier invoice",
-  "bill.create": "Created a bill",
-  "bill.edit": "Edited a bill's details",
-  "bill.delete": "Deleted a bill",
-  "bill.void": "Voided a bill",
-  "loyalty.register": "Enrolled a loyalty member",
-  "loyalty.update": "Edited a loyalty member",
-  "loyalty.delete": "Deleted a loyalty member",
-  "loyalty.status": "Changed a member's status",
-  "loyalty.adjust": "Adjusted loyalty points",
-  "loyalty.issueReward": "Issued a reward",
-  "loyalty.cancelVoucher": "Cancelled a reward voucher",
-  "loyalty.refund": "Refunded loyalty points",
-  "loyalty.grant": "Granted points / rewards",
-  "loyalty.maintain": "Ran loyalty housekeeping",
-  "loyalty.config": "Changed loyalty settings",
-  "loyalty.reward.save": "Saved a reward",
-  "loyalty.offer.save": "Saved a bill offer",
-  "loyalty.offer.delete": "Removed a bill offer",
-  "loyalty.msg.open": "Opened a loyalty WhatsApp message",
-  "loyalty.msg.retry": "Retried a loyalty WhatsApp message",
-  "loyalty.welcome": "Prepared a loyalty welcome message",
-  "loyalty.reward.delete": "Removed a reward",
-  "loyalty.campaign.save": "Saved a campaign",
-  "loyalty.campaign.delete": "Removed a campaign",
-  "tab.approve": "Approved a tab's bill for payment",
-  "tab.unapprove": "Withdrew a tab's bill approval",
-  "tab.payclaim.clear": "Marked a guest's UPI payment as not received",
-  "approval.approve": "Approved a staff change",
-  "approval.reject": "Rejected a staff change",
-};
-
 /** What each approval-gated change reads as in a sentence: "<staff> wants to <verb> <name>". */
 export const APPROVAL_VERBS: Record<string, string> = {
   "ingredient.save": "edit the ingredient",
@@ -404,46 +335,6 @@ export type Batch = {
   /** Sum of the `cost` of all uses booked to this batch. */
   totalCost: number;
   createdAt: number;
-};
-
-export type IngredientMoveType = "purchase" | "use" | "waste" | "adjust";
-
-export type IngredientMove = {
-  id: string;
-  ingredientId: string;
-  ingredientName: string;
-  unit: IngredientUnit;
-  /** signed: + into stock, − out of it */
-  qty: number;
-  type: IngredientMoveType;
-  /** rupee value of this line, always ≥ 0 */
-  cost: number;
-  balanceAfter: number;
-  batchId: string | null;
-  /** Human-readable name of the batch this line came from, when a batch produced it. */
-  batchName: string;
-  /** the note typed for the whole batch ("Any details to remember") */
-  batchNote: string;
-  /** the inventory items this batch produced, e.g. "2 × Veg Burger" — where the ingredient was used */
-  madeFor: string;
-  note: string;
-  createdAt: number;
-};
-
-/** One page of the ingredient ledger, plus period totals and per-ingredient summary. */
-export type IngredientLedger = {
-  rows: IngredientMove[];
-  total: number;
-  page: number;
-  pages: number;
-  stats: {
-    purchased: { qty: number; cost: number };
-    used: { qty: number; cost: number };
-    wasted: { qty: number; cost: number };
-    adjusted: { qty: number };
-  };
-  perIngredient: { id: string; name: string; unit: IngredientUnit; in: number; used: number; wasted: number; close: number }[];
-  ingredients: { id: string; name: string; unit: IngredientUnit }[];
 };
 
 /* Guests never hold an account — they order from the shop's QR code and are known

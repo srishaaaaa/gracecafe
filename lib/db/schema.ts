@@ -2,7 +2,7 @@ import { bigint, boolean, index, integer, jsonb, numeric, pgTable, text, uniqueI
 import { sql } from "drizzle-orm";
 import type { Audit, CampaignType, LedgerType, LoyaltyStatus, Segment, VoucherSource, VoucherStatus } from "../loyalty/types";
 import type { LoyaltyConfig, RewardKind, TierKey } from "../loyalty/config";
-import type { BillSource, UpiChannel, CouponSource, DiscountType, IngredientMoveType, IngredientUnit, OrderItem, OrderSource, OrderStatus, PayMethod, SessionStatus, StockMoveType } from "../types";
+import type { BillSource, UpiChannel, CouponSource, DiscountType, IngredientUnit, OrderItem, OrderSource, OrderStatus, PayMethod, SessionStatus, StockMoveType } from "../types";
 
 /* One database table per type in lib/types.ts. Ids stay the app's own short text ids and
    timestamps stay epoch milliseconds, so rows map 1:1 onto the shapes the UI
@@ -271,24 +271,6 @@ export const productCategories = pgTable(
   (t) => [uniqueIndex("product_categories_name_uq").on(sql`lower(${t.name})`)],
 );
 
-/** Who changed what: one row for every change made in the admin console, by the admin or by staff. */
-export const activityLog = pgTable(
-  "activity_log",
-  {
-    id: text("id").primaryKey(),
-    /** "admin" or "staff" */
-    actor: text("actor").notNull(),
-    /** the op that ran, e.g. "product.save" */
-    action: text("action").notNull(),
-    /** what it was done to — a product name, an invoice number, a member… */
-    target: text("target").notNull().default(""),
-    /** "done" = applied; "requested" = staff asked and the admin has to approve */
-    outcome: text("outcome").notNull().default("done"),
-    createdAt: ms("created_at").notNull(),
-  },
-  (t) => [index("activity_log_created_idx").on(t.createdAt)],
-);
-
 /** Who the shop buys from — kept apart from expenses so each purchase invoice can be tracked. */
 export const suppliers = pgTable(
   "suppliers",
@@ -397,27 +379,6 @@ export const batches = pgTable(
     createdAt: ms("created_at").notNull(),
   },
   (t) => [index("batches_created_idx").on(t.createdAt)],
-);
-
-/** Every change to an ingredient's stock, newest last — a purchase adds, a
-    batch use or waste removes. `cost` is the ₹ value of this line (positive). */
-export const ingredientMoves = pgTable(
-  "ingredient_moves",
-  {
-    id: text("id").primaryKey(),
-    ingredientId: text("ingredient_id").notNull(),
-    ingredientName: text("ingredient_name").notNull(),
-    unit: text("unit").$type<IngredientUnit>().notNull(),
-    /** signed: + into stock, − out of it */
-    qty: amount("qty").notNull(),
-    type: text("type").$type<IngredientMoveType>().notNull(),
-    cost: money("cost").notNull().default(0),
-    balanceAfter: amount("balance_after").notNull(),
-    batchId: text("batch_id"),
-    note: text("note").notNull().default(""),
-    createdAt: ms("created_at").notNull(),
-  },
-  (t) => [index("ingredient_moves_created_idx").on(t.createdAt), index("ingredient_moves_ing_idx").on(t.ingredientId), index("ingredient_moves_batch_idx").on(t.batchId)],
 );
 
 /** Every change to a product's tracked stock, newest last. */

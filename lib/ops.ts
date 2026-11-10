@@ -4,11 +4,11 @@ import { code, uid } from "./seed";
 import { TZ, checkCoupon, computeBill, round2, shopToday } from "./money";
 import { hashPassword } from "./auth";
 import { db, type Db, type Tx } from "./db";
-import { batches, bills, coupons, expenseCategories, expenses, ingredientMoves, ingredients, meta, orders, products, recipes, sessions, settings, staffUsers, stockMovements, supplierInvoices, suppliers, approvalRequests, activityLog, loyaltyCustomers, birthdays, birthdayConfig, loyaltyRewards, loyaltyCampaigns, loyaltyVouchers, giftOffers, productCategories } from "./db/schema";
+import { batches, bills, coupons, expenseCategories, expenses, ingredients, meta, orders, products, recipes, sessions, settings, staffUsers, stockMovements, supplierInvoices, suppliers, approvalRequests, loyaltyCustomers, birthdays, birthdayConfig, loyaltyRewards, loyaltyCampaigns, loyaltyVouchers, giftOffers, productCategories } from "./db/schema";
 import * as L from "./loyalty/server";
 import { pointsPerUnit } from "./loyalty/engine";
 import type { LoyaltyConfig } from "./loyalty/config";
-import { INGREDIENT_UNITS, UPI_CHANNELS, type AdminState, type Coupon, type UpiChannel, Bill, Ingredient, IngredientLedger, IngredientMove, IngredientMoveType, IngredientUnit, StockLedger, MenuItem, Order, OrderItem, OrderStatus, PayMethod, Product, PublicUser, Recipe, RecipeItem, Session, StaffUser, StockMoveType, TabClose, TabView, ShopDetails, BirthdayConfig } from "./types";
+import { INGREDIENT_UNITS, UPI_CHANNELS, type AdminState, type Coupon, type UpiChannel, Bill, Ingredient, IngredientUnit, StockLedger, MenuItem, Order, OrderItem, OrderStatus, PayMethod, Product, PublicUser, Recipe, RecipeItem, Session, StaffUser, StockMoveType, TabClose, TabView, ShopDetails, BirthdayConfig } from "./types";
 
 /* Every read/write the app makes, with validation. Route handlers are thin wrappers.
    Writes run inside store.mutate(), which serializes them and rolls back on error. */
@@ -501,117 +501,6 @@ export async function stockLedger(p: URLSearchParams): Promise<StockLedger> {
   return { rows, total: n, page, pages, stats: { added, sold, removed, returned, adjusted, gifts, net: added - sold - removed - gifts + returned + adjusted }, perProduct, products };
 }
 
-/** The raw-ingredient ledger: paged rows, with totals and a per-ingredient summary
-    that both cover the whole filtered period (so paging doesn't change the numbers).
-    Filters: from/to (ms), type ("all" | purchase | use | waste | adjust), iid, q. */
-export async function ingredientLedger(p: URLSearchParams): Promise<IngredientLedger> {
-  const from = Number(p.get("from")) || null;
-  const to = Number(p.get("to")) || null;
-  const size = Math.min(p.get("export") ? 10000 : 200, Math.max(1, Math.floor(Number(p.get("size"))) || 25));
-  const type = p.get("type") ?? "all";
-  const iid = p.get("iid") ?? "all";
-  const q = (p.get("q") ?? "").trim().slice(0, 80).replace(/[\\%_]/g, (c) => "\\" + c);
-  const M = ingredientMoves;
-
-  const inRange = and(from ? gte(M.createdAt, from) : undefined, to ? lte(M.createdAt, to) : undefined);
-  const where = and(
-    inRange,
-    type !== "all" ? eq(M.type, type as IngredientMoveType) : undefined,
-    iid !== "all" ? eq(M.ingredientId, iid) : undefined,
-    q ? or(ilike(M.ingredientName, `%${q}%`), ilike(M.note, `%${q}%`), ilike(batches.note, `%${q}%`), ilike(batches.name, `%${q}%`)) : undefined,
-  );
-
-  const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(M).leftJoin(batches, eq(batches.id, M.batchId)).where(where);
-  const pages = Math.max(1, Math.ceil(n / size));
-  const page = Math.min(pages, Math.max(1, Math.floor(Number(p.get("page"))) || 1));
-
-  /* Column sort — clicking a header on the admin page flips to desc/asc on that key.
-     Default is newest-first by date, matching how the user reads a running log. */
-  const sort = (p.get("sort") ?? "date").toLowerCase();
-  const dir = (p.get("dir") ?? "desc").toLowerCase() === "asc" ? asc : desc;
-  const sortCol =
-    sort === "ingredient" ? M.ingredientName
-    : sort === "type" ? M.type
-    : sort === "qty" ? sql`abs(${M.qty})`
-    : sort === "cost" ? M.cost
-    : sort === "balance" ? M.balanceAfter
-    : M.createdAt;
-  const orderBy = sort === "date"
-    ? [dir(M.createdAt), dir(M.id)]
-    : [dir(sortCol), desc(M.createdAt), desc(M.id)];
-
-  const [rows, byType, perIngredient, ingList] = await Promise.all([
-    db
-      .select({
-        id: M.id,
-        ingredientId: M.ingredientId,
-        ingredientName: M.ingredientName,
-        unit: M.unit,
-        qty: M.qty,
-        type: M.type,
-        cost: M.cost,
-        balanceAfter: M.balanceAfter,
-        batchId: M.batchId,
-        batchName: sql<string>`coalesce(${batches.name}, '')`,
-        batchNote: sql<string>`coalesce(${batches.note}, '')`,
-        // what the batch was made into, e.g. "2 × Veg Burger" (the inventory items logged as produced in the same batch)
-        madeFor: sql<string>`coalesce((select string_agg(sm.qty || ' × ' || sm.product_name, ', ') from stock_movements sm where sm.ref = ${batches.name} and sm.created_at = ${batches.createdAt} and sm.type in ('added', 'initial')), '')`,
-        note: M.note,
-        createdAt: M.createdAt,
-      })
-      .from(M)
-      .leftJoin(batches, eq(batches.id, M.batchId))
-      .where(where)
-      .orderBy(...orderBy)
-      .limit(size)
-      .offset((page - 1) * size),
-    db
-      .select({ type: M.type, qty: sql<number>`coalesce(sum(abs(${M.qty})), 0)::float`, cost: sql<number>`coalesce(sum(${M.cost}), 0)::float` })
-      .from(M)
-      .where(inRange)
-      .groupBy(M.type),
-    db
-      .select({
-        id: M.ingredientId,
-        name: sql<string>`max(${M.ingredientName})`,
-        unit: sql<IngredientUnit>`max(${M.unit})`,
-        in: sql<number>`coalesce(sum(case when ${M.type} = 'purchase' then ${M.qty} else 0 end), 0)::float`,
-        used: sql<number>`coalesce(sum(case when ${M.type} = 'use' then -${M.qty} else 0 end), 0)::float`,
-        wasted: sql<number>`coalesce(sum(case when ${M.type} = 'waste' then -${M.qty} else 0 end), 0)::float`,
-        close: sql<number>`coalesce((array_agg(${M.balanceAfter} order by ${M.createdAt} desc, ${M.id} desc))[1], 0)::float`,
-      })
-      .from(M)
-      .where(inRange)
-      .groupBy(M.ingredientId)
-      .orderBy(sql`sum(abs(${M.qty})) desc`),
-    db
-      .select({ id: ingredients.id, name: ingredients.name, unit: ingredients.unit })
-      .from(ingredients)
-      .where(eq(ingredients.active, true))
-      .orderBy(asc(ingredients.name)),
-  ]);
-
-  const kind = (t: IngredientMoveType) => byType.find((r) => r.type === t) ?? { qty: 0, cost: 0 };
-  const purchased = kind("purchase");
-  const used = kind("use");
-  const wasted = kind("waste");
-  const adjustQty = byType.find((r) => r.type === "adjust")?.qty ?? 0;
-  return {
-    rows,
-    total: n,
-    page,
-    pages,
-    stats: {
-      purchased: { qty: round3(purchased.qty), cost: round2(purchased.cost) },
-      used: { qty: round3(used.qty), cost: round2(used.cost) },
-      wasted: { qty: round3(wasted.qty), cost: round2(wasted.cost) },
-      adjusted: { qty: round3(adjustQty) },
-    },
-    perIngredient: perIngredient.map((r) => ({ ...r, in: round3(r.in), used: round3(r.used), wasted: round3(r.wasted), close: round3(r.close) })),
-    ingredients: ingList,
-  };
-}
-
 type Move = { type: StockMoveType; ref?: string; note?: string };
 
 /** One row in the stock ledger. */
@@ -999,31 +888,8 @@ async function ensureExpenseCategory(tx: Tx, name: string, now: number): Promise
 
 export function adminOp(op: string, a: Args, role = "admin") {
   return mutate(async (tx) => {
-    const result = await runOp(tx, op, a, role);
-    await logActivity(tx, op, a, role, result);
-    return result;
+    return runOp(tx, op, a, role);
   });
-}
-
-/** Writes who did what to the activity log, in the same transaction as the change itself. */
-async function logActivity(tx: Tx, op: string, a: Args, role: string, result: unknown) {
-  const r = (result && typeof result === "object" ? result : {}) as Record<string, unknown>;
-  const pending = r.pendingApproval === true;
-  const inner = (pending ? (r.request as Record<string, unknown> | undefined) : r) ?? {};
-  let target = "";
-  for (const k of ["targetName", "invoiceNo", "name", "code", "title", "customerName"]) {
-    const v = inner[k];
-    if (typeof v === "string" && v) {
-      target = v;
-      break;
-    }
-  }
-  if (!target) for (const k of ["name", "code", "title"]) if (typeof a[k] === "string" && a[k]) { target = String(a[k]); break; }
-  await tx.insert(activityLog).values({ id: uid(), actor: role === "admin" ? "admin" : "staff", action: op, target: target.slice(0, 120), outcome: pending ? "requested" : "done", createdAt: Date.now() });
-}
-
-export async function activityPage() {
-  return db.select().from(activityLog).orderBy(desc(activityLog.createdAt)).limit(2000);
 }
 
 /** Edits staff may ask for, but that only take effect with the admin's say-so: when staff run
@@ -1515,11 +1381,6 @@ export async function runOp(tx: Tx, op: string, a: Args, role: string): Promise<
         const newStock = round3(ing.stock + qty);
         const newCost = round6((ing.stock * ing.costPerUnit + cost) / Math.max(newStock, 1e-6));
         const [u] = await tx.update(ingredients).set({ stock: newStock, costPerUnit: newCost, updatedAt: now }).where(eq(ingredients.id, ing.id)).returning();
-        await tx.insert(ingredientMoves).values({
-          id: uid(), ingredientId: ing.id, ingredientName: ing.name, unit: ing.unit,
-          qty, type: "purchase", cost, balanceAfter: newStock, batchId: null,
-          note: str(a.note, 200) || `Bought ${qty}${ing.unit} at ₹${cost}`, createdAt: now,
-        });
         return u;
       }
       case "ingredient.waste": {
@@ -1529,13 +1390,7 @@ export async function runOp(tx: Tx, op: string, a: Args, role: string): Promise<
         if (!(qty > 0)) throw new ApiError(`Enter the quantity wasted (${ing.unit}).`);
         if (qty > ing.stock + 1e-6) throw new ApiError(`Only ${fmtQty(ing.stock)}${ing.unit} of ${ing.name} on hand.`);
         const newStock = round3(ing.stock - qty);
-        const cost = round2(qty * ing.costPerUnit);
         const [u] = await tx.update(ingredients).set({ stock: newStock, updatedAt: now }).where(eq(ingredients.id, ing.id)).returning();
-        await tx.insert(ingredientMoves).values({
-          id: uid(), ingredientId: ing.id, ingredientName: ing.name, unit: ing.unit,
-          qty: -qty, type: "waste", cost, balanceAfter: newStock, batchId: null,
-          note: str(a.note, 200) || "Wasted / discarded", createdAt: now,
-        });
         return u;
       }
       case "ingredient.adjust": {
@@ -1546,11 +1401,6 @@ export async function runOp(tx: Tx, op: string, a: Args, role: string): Promise<
         const delta = round3(target - ing.stock);
         if (delta === 0) return ing;
         const [u] = await tx.update(ingredients).set({ stock: target, updatedAt: now }).where(eq(ingredients.id, ing.id)).returning();
-        await tx.insert(ingredientMoves).values({
-          id: uid(), ingredientId: ing.id, ingredientName: ing.name, unit: ing.unit,
-          qty: delta, type: "adjust", cost: round2(Math.abs(delta) * ing.costPerUnit), balanceAfter: target, batchId: null,
-          note: str(a.note, 200) || "Stock corrected", createdAt: now,
-        });
         return u;
       }
       case "recipe.save": {
@@ -1623,13 +1473,7 @@ export async function runOp(tx: Tx, op: string, a: Args, role: string): Promise<
         const [b] = await tx.insert(batches).values({ id: uid(), name, note, totalCost, createdAt: now }).returning();
         for (const w of want) {
           const newStock = round3(w.ing.stock - w.qty);
-          const cost = round2(w.qty * w.ing.costPerUnit);
           await tx.update(ingredients).set({ stock: newStock, updatedAt: now }).where(eq(ingredients.id, w.ing.id));
-          await tx.insert(ingredientMoves).values({
-            id: uid(), ingredientId: w.ing.id, ingredientName: w.ing.name, unit: w.ing.unit,
-            qty: -w.qty, type: "use", cost, balanceAfter: newStock, batchId: b.id,
-            note: w.note || `Used in ${name}`, createdAt: now,
-          });
           /* Keep the ingredient's cached stock in sync for the next loop iteration
              in case the same ingredient appears twice in the batch. */
           w.ing.stock = newStock;

@@ -176,6 +176,13 @@
       "when": 1791501800000,
       "tag": "0024_product_variants",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791501900000,
+      "tag": "0025_remove_logs",
+      "breakpoints": true
     }
   ]
 }
