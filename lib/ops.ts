@@ -1257,7 +1257,7 @@ export async function runOp(tx: Tx, op: string, a: Args, role: string): Promise<
         }
         if (a.upiId !== undefined) {
           const v = str(a.upiId, 80).toLowerCase();
-          if (v && !/^[a-z0-9._-]{2,64}@[a-z0-9.-]{2,32}$/.test(v)) throw new ApiError("The UPI ID should look like name@bank.");
+          if (v && !/^[a-z0-9._-]{2,64}@[a-z0-9.-]{2,32}$/.test(v)) throw new ApiError("The UPI ID should look like name@bank — for a phone number, add its UPI handle, like 9042001476@ybl. You can see it in GPay or PhonePe under your profile → UPI IDs.");
           patch.upiId = v;
         }
         if (a.upiName !== undefined) patch.upiName = str(a.upiName, 60);

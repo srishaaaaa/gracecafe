@@ -9,7 +9,7 @@ import { mmss, spacedPhone, useUpiQr } from "@/app/_components/upiQr";
    shop's UPI ID; the QR is renewed every few minutes. Nothing here confirms a payment — the counter checks
    their UPI app — so it asks the customer to show the payment confirmation. */
 export function PayClient({ amount, name, shop, logoUrl, upi }: { amount: number; name: string; shop: string; logoUrl: string; upi: { id: string; name: string; minutes: number; phone: string } }) {
-  const { link, ref, left, ready } = useUpiQr(upi, amount, shop, "W");
+  const { link, apps, ref, left, ready } = useUpiQr(upi, amount, shop, "W");
   const [copied, setCopied] = useState("");
   const copy = async (what: string, v: string) => {
     try {
@@ -31,12 +31,23 @@ export function PayClient({ amount, name, shop, logoUrl, upi }: { amount: number
           <p className="mt-1 text-[44px] font-black leading-none">{rupee(amount)}</p>
         </div>
         <div className="space-y-4 p-6 text-center">
+          <p className="text-[13px] font-bold text-slate-700">
+            Pay {rupee(amount)} to {upi.name} with
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <a href={ready ? apps.gpay : undefined} aria-disabled={!ready} className="inline-flex h-12 items-center justify-center rounded-xl bg-[#1a73e8] text-[15px] font-bold text-white aria-disabled:opacity-50">
+              GPay
+            </a>
+            <a href={ready ? apps.phonepe : undefined} aria-disabled={!ready} className="inline-flex h-12 items-center justify-center rounded-xl bg-[#5f259f] text-[15px] font-bold text-white aria-disabled:opacity-50">
+              PhonePe
+            </a>
+          </div>
           <a href={ready ? link : undefined} aria-disabled={!ready} className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-[#9a7420] text-[15px] font-bold text-white hover:bg-[#765712] aria-disabled:opacity-50">
-            Open my UPI app
+            Any other UPI app
           </a>
           <div className="mx-auto w-52 rounded-2xl border border-slate-200 bg-white p-2">{ready ? <Qr text={link} className="block h-auto w-full" /> : <div className="aspect-square w-full" aria-hidden="true" />}</div>
           <p className="text-[12.5px] text-slate-500">
-            On a phone, tap the button. Or scan this QR from another phone. New QR in <b>{ready ? mmss(left) : "…"}</b>.
+            On a phone, tap your app. If nothing opens, that app isn&apos;t installed — try another button. Or scan this QR from another phone. New QR in <b>{ready ? mmss(left) : "…"}</b>.
           </p>
           <dl className="space-y-2 rounded-2xl bg-slate-50 p-4 text-left text-[13px]">
             <div className="flex items-center justify-between gap-3">
@@ -72,6 +83,7 @@ export function PayClient({ amount, name, shop, logoUrl, upi }: { amount: number
               <dd className="font-mono text-[12px]">{ref || "…"}</dd>
             </div>
           </dl>
+          <p className="text-[12px] text-slate-500">If your app says it can&apos;t process the payment, copy the UPI ID above and pay it from inside your UPI app instead.</p>
           <p className="text-[12px] text-slate-500">After paying, show the confirmation on your phone at the counter.</p>
         </div>
       </div>

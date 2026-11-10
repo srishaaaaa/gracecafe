@@ -20,7 +20,7 @@ export function UpiPay({ tab, shop, phone, onView }: { tab: Tab; shop: string; p
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [copied, setCopied] = useState("");
-  const { link, ref, left, ready } = useUpiQr(upi, amount, shop, `T${phone.slice(-4)}`);
+  const { link, apps, ref, left, ready } = useUpiQr(upi, amount, shop, `T${phone.slice(-4)}`);
 
   const claim = tab.payClaim;
   const claimedFull = !!claim && Math.abs(claim.amount - amount) < 0.01;
@@ -60,12 +60,20 @@ export function UpiPay({ tab, shop, phone, onView }: { tab: Tab; shop: string; p
       <h4>
         Pay <b>{rupee(amount)}</b> by UPI
       </h4>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <a className="tm-upi__open" style={{ background: "#1a73e8" }} href={ready ? apps.gpay : undefined} aria-disabled={!ready}>
+          GPay
+        </a>
+        <a className="tm-upi__open" style={{ background: "#5f259f" }} href={ready ? apps.phonepe : undefined} aria-disabled={!ready}>
+          PhonePe
+        </a>
+      </div>
       <a className="tm-upi__open" href={ready ? link : undefined} aria-disabled={!ready}>
-        Open my UPI app
+        Any other UPI app
       </a>
       <div className="tm-upi__qr">{ready ? <Qr text={link} className="tm-upi__svg" color="#1f2218" /> : <div className="tm-upi__svg" style={{ aspectRatio: "1" }} aria-hidden="true" />}</div>
       <p className="tm-upi__hint">
-        On a phone, tap the button. Or scan this QR from another phone. New QR in <b>{ready ? mmss(left) : "…"}</b>.
+        On a phone, tap your app. Or scan this QR from another phone. New QR in <b>{ready ? mmss(left) : "…"}</b>.
       </p>
       <p className="tm-upi__id">
         Pay to <b>{upi.name}</b>

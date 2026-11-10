@@ -87,7 +87,7 @@ function Settings({ onClose }: { onClose: () => void }) {
   const d = s.settings;
   const [form, setForm] = useState({
     shopName: d.shopName, ownerName: d.ownerName, location: d.location, address: d.address, address2: "",
-    whatsapp1: d.whatsapp1, whatsapp2: "", customerCare: d.customerCare, email: d.email, mapsUrl: d.mapsUrl, logoUrl: d.logoUrl,
+    whatsapp1: d.whatsapp1, whatsapp2: "", customerCare: d.customerCare, email: d.email, mapsUrl: d.mapsUrl, logoUrl: d.logoUrl, publicUrl: d.publicUrl,
     upiId: d.upiId, upiName: d.upiName, upiPhone: d.upiPhone, upiQrMinutes: String(d.upiQrMinutes),
   });
   const [saving, setSaving] = useState(false);
@@ -150,6 +150,7 @@ function Settings({ onClose }: { onClose: () => void }) {
           </div>
           <Field label="Address" hint="One line per row"><textarea className={cx(inputCls, "h-20 resize-none py-2 leading-snug")} value={form.address} onChange={set("address")} /></Field>
           <Field label="Google Maps link"><input className={inputCls} value={form.mapsUrl} maxLength={500} onChange={set("mapsUrl")} placeholder="https://maps.app.goo.gl/…" /></Field>
+          <Field label="Website address" hint="The address customers open. QR codes and WhatsApp payment links use it, so it must be your live website."><input className={inputCls} inputMode="url" autoCapitalize="none" value={form.publicUrl} maxLength={200} onChange={set("publicUrl")} placeholder="https://gracecafe.vercel.app" /></Field>
         </Sec>
 
         <Sec title="Logo" desc="Upload a PNG or JPG, or paste an image link. Blank uses the built-in icon.">
@@ -173,7 +174,7 @@ function Settings({ onClose }: { onClose: () => void }) {
 
         <Sec title="Guests paying by UPI" desc="Guests see a UPI QR with their exact amount on their phone tab. It's your own UPI ID, so there are no fees — but staff confirm the payment in their UPI app. Leave the UPI ID blank to switch it off.">
           <div className={two}>
-            <Field label="Shop UPI ID" hint="Like name@bank"><input className={inputCls} value={form.upiId} maxLength={80} onChange={set("upiId")} placeholder="yourshop@okicici" autoCapitalize="none" /></Field>
+            <Field label="Shop UPI ID" hint="Where the money goes. UPI links need an ID, not a bare number — see it in GPay or PhonePe under your profile → UPI IDs (often like 9042001476@ybl)."><input className={inputCls} value={form.upiId} maxLength={80} onChange={set("upiId")} placeholder="yourshop@okicici" autoCapitalize="none" /></Field>
             <Field label="Name shown in the UPI app" hint="Blank uses the shop name"><input className={inputCls} value={form.upiName} maxLength={60} onChange={set("upiName")} /></Field>
             <Field label="GPay / PhonePe number (optional)" hint="10 digits, shown beside the UPI ID"><input className={inputCls} inputMode="numeric" value={form.upiPhone} maxLength={14} onChange={set("upiPhone")} placeholder="98765 43210" /></Field>
             <Field label="Change the QR every (minutes)" hint="A fresh QR replaces the old one"><input className={inputCls} type="number" min={1} max={30} inputMode="numeric" value={form.upiQrMinutes} onChange={set("upiQrMinutes")} /></Field>

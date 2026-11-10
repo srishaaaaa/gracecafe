@@ -36,6 +36,11 @@ export function useUpiQr(upi: { id: string; name: string; minutes: number; phone
   const period = Math.max(1, upi.minutes) * 60_000;
   const left = ready ? Math.ceil((period - (now % period)) / 1000) : 0;
   const ref = ready ? `${tag}${(Math.floor(now / period) * period).toString(36).toUpperCase().slice(-6)}` : "";
-  const link = ready ? `upi://pay?pa=${enc(upi.id)}&pn=${enc(upi.name)}&am=${amount.toFixed(2)}&cu=INR&tn=${enc(`${shop} ${ref}`.slice(0, 40))}&tr=${enc(ref)}` : "";
-  return { link, ref, left, ready };
+  /* Only the fields every UPI app accepts for any UPI ID: payee, name, amount, currency and a short note. A transaction
+     reference ("tr") is for registered merchants — with a personal UPI ID, GPay and PhonePe decline the payment. */
+  const query = ready ? `pa=${enc(upi.id)}&pn=${enc(upi.name)}&am=${amount.toFixed(2)}&cu=INR&tn=${enc(`${shop} ${ref}`.slice(0, 40))}` : "";
+  const link = ready ? `upi://pay?${query}` : "";
+  /* the same payment, addressed to one app so a tap opens GPay or PhonePe straight away (any UPI app uses `link`) */
+  const apps = ready ? { gpay: `tez://upi/pay?${query}`, phonepe: `phonepe://pay?${query}`, paytm: `paytmmp://pay?${query}` } : { gpay: "", phonepe: "", paytm: "" };
+  return { link, apps, ref, left, ready };
 }
