@@ -109,8 +109,8 @@ export default function StockMovementsPage() {
           />
           {period === "custom" && <DateRange from={from} to={to} onFrom={filter(setFrom)} onTo={filter(setTo)} />}
         </div>
-        <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
-          <select className="h-10 rounded-full border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-700 outline-none" value={type} onChange={(e) => filter(setType)(e.target.value as typeof type)} aria-label="Type">
+        <div className="flex w-full flex-wrap items-center gap-2 lg:ml-auto lg:w-auto lg:flex-nowrap">
+          <select className="h-10 w-full rounded-full border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-700 outline-none sm:w-auto" value={type} onChange={(e) => filter(setType)(e.target.value as typeof type)} aria-label="Type">
             <option value="all">All movements</option>
             {Object.entries(TYPE).map(([k, [t]]) => (
               <option key={k} value={k}>
@@ -119,7 +119,7 @@ export default function StockMovementsPage() {
             ))}
           </select>
           <ItemSelect
-            className="!h-10 w-[210px] !rounded-full"
+            className="!h-10 !w-full !rounded-full sm:!w-[230px]"
             products={names.map((n) => ({ id: n.id, name: n.name, category: s.products.find((p) => p.id === n.id)?.category ?? "Removed items" }))}
             value={pid === "all" ? "" : pid}
             onChange={(v) => filter(setPid)(v || "all")}
@@ -127,11 +127,11 @@ export default function StockMovementsPage() {
             clear="All products"
             title="Filter by product"
           />
-          <SearchBox value={q} onChange={(v) => (setQ(v), setPage(1))} placeholder="Search product, note, invoice…" className="w-full sm:w-64" />
+          <SearchBox value={q} onChange={(v) => (setQ(v), setPage(1))} placeholder="Search product, note, invoice…" className="w-full sm:w-64 lg:shrink-0" />
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-6">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 2xl:grid-cols-6">
         <Kpi label="Stock added" value={`+${st.added}`} hint="Restocks and opening stock" icon="plus" tone="emerald" />
         <Kpi label="Used / sold" value={st.sold} hint="Orders and bills" icon="bag" tone="rose" />
         <Kpi label="Removed" value={st.removed} hint="Wastage, damage, own use" icon="minus" tone="amber" />
