@@ -91,7 +91,7 @@ export default function QueuePage() {
           Nothing waiting and nothing on the pass. An order appears here the moment a guest sends one.
         </Empty>
       ) : (
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {(["new", "preparing"] as const).map((col) => {
             const list = queue.filter((o) => o.status === col);
             return (

@@ -63,7 +63,7 @@ export default function KitchenPage() {
         sub="Every open ticket on one screen — slide a card right as it moves through the kitchen."
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {COLS.map((col) => {
           const list = grouped[col.key];
           return (

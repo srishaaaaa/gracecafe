@@ -244,7 +244,6 @@ function ItemPicker({ ingredients: ings, products, initialKind = "all", onPick, 
 function BatchModal({ ingredients: ings, products, recipes, onClose }: { ingredients: Ingredient[]; products: Product[]; recipes: Recipe[]; onClose: () => void }) {
   const { act, confirm, toast, role } = useAdmin();
   const [name, setName] = useState("");
-  const [note, setNote] = useState("");
   const [rows, setRows] = useState<Row[]>([blankRow()]);
   const [busy, setBusy] = useState(false);
   const [recipeId, setRecipeId] = useState("");
@@ -287,7 +286,6 @@ function BatchModal({ ingredients: ings, products, recipes, onClose }: { ingredi
     /* The batch name becomes the recipe name — this is what shows in the ledger
        as "Used in <name>", which the client wants to be the recipe's own name. */
     setName(r.name);
-    if (r.note) setNote(r.note);
   };
 
   const clearRecipe = () => {
@@ -325,7 +323,7 @@ function BatchModal({ ingredients: ings, products, recipes, onClose }: { ingredi
     if (problems.length) return toast({ kind: "err", title: `Not enough ${problems[0].ing.name} on hand.` });
     setBusy(true);
     const r = await act<Batch>("batch.save", {
-      name, note,
+      name,
       uses: uses.map((u) => ({ ingredientId: u.ing.id, qty: u.qty, note: u.r.note })),
       produces: produces.map((p) => ({ productId: p.prod.id, qty: p.qty, note: p.r.note })),
     });
@@ -334,7 +332,7 @@ function BatchModal({ ingredients: ings, products, recipes, onClose }: { ingredi
       /* The user asked us to remember these rows for next time. Recipes still
          only hold the ingredient side — produced items are logged ad-hoc. */
       const items = uses.map((u) => ({ ingredientId: u.ing.id, qty: u.qty, note: u.r.note }));
-      await act("recipe.save", { name, note, items });
+      await act("recipe.save", { name, items });
     }
     setBusy(false);
     const madeMsg = produces.length ? ` · made ${produces.reduce((s, p) => s + p.qty, 0)} inventory unit${produces.reduce((s, p) => s + p.qty, 0) === 1 ? "" : "s"}` : "";
@@ -430,9 +428,8 @@ function BatchModal({ ingredients: ings, products, recipes, onClose }: { ingredi
             </div>
           </Field>
         )}
-        <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
+        <div>
           <Field label="Batch name"><input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Chocolate cake × 2" maxLength={120} autoFocus /></Field>
-          <Field label="Note (optional)"><input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Any details to remember" maxLength={300} /></Field>
         </div>
         <div className="space-y-2 rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
           {rows.map((r) => {

@@ -668,6 +668,8 @@ async function saveFamily(tx: Tx, a: Args, role: string) {
   const oldFamily = str(a.oldFamily, 60);
   if (!family) throw new ApiError("Give the product a name.");
   const raw = (Array.isArray(a.variants) ? a.variants : []) as Args[];
+  // staff may add a product with variants; changing or removing the variants of one that exists is the admin's call
+  if (role !== "admin" && (oldFamily || raw.some((v) => str(v.id, 40)))) throw new ApiError("Only the admin can change a product that already exists. Ask the admin, or add a new product.", 403);
   if (!raw.length) throw new ApiError("Add at least one variant.");
   const seen = new Set<string>();
   for (const v of raw) {

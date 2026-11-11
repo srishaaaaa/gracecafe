@@ -121,7 +121,7 @@ export default function Dashboard({ d, pd, onOpen }: { d: LoyaltyState; pd: Peri
         <Stat label="Free gifts given" value={x.periodGifts} hint={`${pd.label} · ${x.waiting} unlocked, waiting`} />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <Card title={range ? `Points by month · ${pd.label}` : "Points, last 6 months"}>
           {!x.months.length ? (
             <p className="py-8 text-center text-[13px] text-slate-400">Points will appear here after the first loyalty bill.</p>
@@ -167,7 +167,7 @@ export default function Dashboard({ d, pd, onOpen }: { d: LoyaltyState; pd: Peri
         </Card>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Card title={range ? "Most points earned" : "Top customers by points"}>
           <Ranked rows={x.byPoints.map(({ c, value }) => ({ key: c.id, name: c.name, sub: c.phone, value }))} />
         </Card>
@@ -176,7 +176,7 @@ export default function Dashboard({ d, pd, onOpen }: { d: LoyaltyState; pd: Peri
         </Card>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Card title="Free gifts given" right={<button type="button" onClick={() => onOpen("rewards")} className="text-[12px] font-bold text-red-600 hover:underline">Manage gifts</button>}>
           {!x.gifts.length ? (
             <p className="py-6 text-center text-[13px] text-slate-400">No free gifts have been given yet.</p>

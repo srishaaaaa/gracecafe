@@ -923,7 +923,7 @@ export default function InventoryPage() {
               <Field label="Name *" className="sm:col-span-2">
                 <input className={inputCls} value={form.name} maxLength={form.hasVariants ? 60 : 80} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={form.hasVariants ? "Popcorn" : "Crispy Veg Burger"} />
               </Field>
-              {role === "admin" && (
+              {(role === "admin" || !form.id) && (
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 p-4 sm:col-span-2">
                   <span>
                     <b className="block text-[13px] text-slate-800">This product has variants</b>

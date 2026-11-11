@@ -586,7 +586,7 @@ export default function AnalyticsPage() {
             />
             <Kpi label="Today's avg order value" value={rupee(Math.round(tsum.aov))} hint="Per invoice today" icon="zap" tone="orange" />
           </div>
-          <div className="grid gap-5 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
             <Card
               className="xl:col-span-2"
               title={<span className="text-[14px] uppercase tracking-[0.14em] text-slate-900">Today&apos;s transactions</span>}

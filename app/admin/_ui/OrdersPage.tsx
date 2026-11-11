@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UPI_CHANNELS, type Bill, type Coupon, type OrdersPageData, type UpiChannel } from "@/lib/types";
-import { computeBill, payLabel, payParts, round2, rupee, shopToday } from "@/lib/money";
+import { computeBill, gstSplit, payLabel, payParts, round2, rupee, shopToday } from "@/lib/money";
 import { rangeOf, type Period } from "@/lib/analytics";
 import { useAdmin } from "./Store";
 import { billText, waLink } from "./receipt";
 import PrintModal from "./PrintModal";
+import { ItemSelect } from "./ItemSelect";
 import { Badge, Btn, Empty, Field, Icon, Modal, Page, PageHead, SearchBox, Switch, WaIcon, cx, downloadExcel, fmtDate, fmtDateTime, fmtTime, inputCls } from "./kit";
 
 type DateF = Extract<Period, "today" | "week" | "month" | "custom"> | "any";
@@ -15,8 +16,8 @@ type PayF = "all" | "cash" | "upi" | "card" | "split";
 
 
 
-const th = "px-3 py-4 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-500 whitespace-nowrap";
-const td = "px-3 py-4 text-[13px] whitespace-nowrap";
+const th = "px-2.5 py-3.5 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-500 whitespace-nowrap";
+const td = "px-2.5 py-3 text-[13px] whitespace-nowrap";
 
 function Chip({ on, children, onClick, tone = "red" }: { on: boolean; children: React.ReactNode; onClick: () => void; tone?: "red" | "link" }) {
   if (tone === "link")
@@ -135,9 +136,34 @@ export default function OrdersPage() {
     }
   };
   const exportRows = (list: Bill[]): (string | number)[][] => [
-    ["Invoice", "Type", "Customer", "Mobile", "Items", "Subtotal", "Coupon", "Coupon discount", "Manual discount", "Extra", "Bill type", "GST %", "Taxable amount", "GST amount", "Total", "Payment", "UPI came through", "Cash", "UPI", "Card", "Status", "Date", "Time", "Reward", "Reward discount", "Points redeemed", "Points discount", "Points earned"],
-    ...list.map((b) => [b.invoiceNo, b.source, b.customerName, b.customerPhone, b.itemCount, b.subtotal, b.couponCode ?? "", b.couponDiscount, b.manualDiscount, b.extra, b.isGst ? "GST" : "Non-GST", b.gstPercent, b.taxableAmount, b.gstAmount, b.total, b.payment, UPI_CHANNELS.find((c) => c.key === b.upiChannel)?.label ?? "", b.cashAmount, b.upiAmount, b.cardAmount, b.status, fmtDate(b.createdAt), fmtTime(b.createdAt), b.rewardName ?? "", b.rewardDiscount, b.pointsRedeemed, b.pointsDiscount, b.pointsEarned]),
+    ["Invoice", "Type", "Customer", "Mobile", "Items", "Subtotal", "Coupon", "Coupon discount", "Manual discount", "Extra", "Bill type", "GST %", "Taxable amount", "CGST", "SGST", "GST amount", "Total", "Payment", "UPI came through", "Cash", "UPI", "Card", "Status", "Date", "Time", "Reward", "Reward discount", "Points redeemed", "Points discount", "Points earned"],
+    ...list.map((b) => [b.invoiceNo, b.source, b.customerName, b.customerPhone, b.itemCount, b.subtotal, b.couponCode ?? "", b.couponDiscount, b.manualDiscount, b.extra, b.isGst ? "GST" : "Non-GST", b.gstPercent, b.taxableAmount, gstSplit(b.gstPercent, b.gstAmount).cgst, gstSplit(b.gstPercent, b.gstAmount).sgst, b.gstAmount, b.total, b.payment, UPI_CHANNELS.find((c) => c.key === b.upiChannel)?.label ?? "", b.cashAmount, b.upiAmount, b.cardAmount, b.status, fmtDate(b.createdAt), fmtTime(b.createdAt), b.rewardName ?? "", b.rewardDiscount, b.pointsRedeemed, b.pointsDiscount, b.pointsEarned]),
   ];
+
+  /* the same five buttons on every bill, in the table and on the phone cards */
+  const rowActions = (b: Bill) => (
+    <span className="inline-flex gap-1.5 md:gap-1">
+                        {b.customerPhone && (
+                          <a suppressHydrationWarning href={waLink(b.customerPhone, billText(b, s.settings.shopName, s.settings.publicUrl))} target="_blank" rel="noopener noreferrer" title="Send on WhatsApp" aria-label="Send on WhatsApp" className="grid h-9 w-9 place-items-center md:h-8 md:w-8 rounded-lg bg-emerald-50 text-[#22c55e] hover:bg-emerald-100">
+                            <WaIcon size={18} />
+                          </a>
+                        )}
+                        <button type="button" title="View details" aria-label="View details" onClick={() => setBill(b)} className="grid h-9 w-9 place-items-center md:h-8 md:w-8 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">
+                          <Icon name="eye" size={16} />
+                        </button>
+                        <button type="button" title="Edit details" aria-label="Edit details" onClick={() => setEditing(b)} className="grid h-9 w-9 place-items-center md:h-8 md:w-8 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">
+                          <Icon name="edit" size={16} />
+                        </button>
+                        <button type="button" title="Print receipt" aria-label="Print receipt" onClick={() => setPrintFor(b)} className="grid h-9 w-9 place-items-center md:h-8 md:w-8 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">
+                          <Icon name="print" size={16} />
+                        </button>
+                        {role === "admin" && (
+                          <button type="button" title="Delete bill" aria-label="Delete bill" onClick={() => remove(b)} className="grid h-9 w-9 place-items-center md:h-8 md:w-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">
+                            <Icon name="trash" size={16} />
+                          </button>
+                        )}
+                      </span>
+  );
 
   return (
     <Page>
@@ -183,8 +209,9 @@ export default function OrdersPage() {
 
       <div className="mb-5 flex flex-col gap-4 rounded-2xl border border-slate-100 p-5 shadow-[0_2px_10px_-2px_rgba(15,23,42,.08)] lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="w-14 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Type</span>
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+            <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 sm:w-16">Type</span>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
             {(
               [
                 ["all", "All Bills"],
@@ -196,9 +223,11 @@ export default function OrdersPage() {
                 {t}
               </Chip>
             ))}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="w-14 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Paid by</span>
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+            <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 sm:w-16">Paid by</span>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
             {(
               [
                 ["all", "All"],
@@ -212,9 +241,11 @@ export default function OrdersPage() {
                 {t}
               </Chip>
             ))}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="w-14 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Date</span>
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+            <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 sm:w-16">Date</span>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
             {(
               [
                 ["today", "Today"],
@@ -239,6 +270,7 @@ export default function OrdersPage() {
                 <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="h-8 rounded-lg border border-slate-200 px-2 text-slate-800" />
               </span>
             )}
+            </div>
           </div>
         </div>
         <SearchBox value={q} onChange={setQ} placeholder="Search invoice, name, mobile, item…" className="w-full lg:w-80" />
@@ -251,9 +283,36 @@ export default function OrdersPage() {
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-100 shadow-[0_2px_10px_-2px_rgba(15,23,42,.08)]">
+      {/* phones: one card per bill, no sideways scrolling */}
+      <ul className="space-y-3 md:hidden">
+        {slice.map((b) => (
+          <li key={b.id} className={cx("rounded-2xl border border-slate-100 bg-white p-3.5 shadow-[0_2px_10px_-2px_rgba(15,23,42,.08)]", b.status === "void" && "opacity-60")}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <button type="button" onClick={() => setBill(b)} className="block max-w-full truncate text-left text-[14px] font-bold text-red-600">
+                  {b.invoiceNo}
+                </button>
+                <span className="mt-0.5 block truncate text-[13px] font-semibold text-slate-800">{b.customerName || "—"}</span>
+                {b.customerPhone && <span className="block text-[12px] text-slate-500">{b.customerPhone}</span>}
+              </div>
+              <div className="shrink-0 text-right">
+                <b className="block text-[17px] leading-none text-slate-900">{rupee(b.total)}</b>
+                <span className="mt-1 block text-[11.5px] text-slate-500">{fmtDate(b.createdAt)}</span>
+              </div>
+            </div>
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+              {b.source === "tab" ? <Badge tone="orange">Customer tab</Badge> : <Badge tone="sky">Counter</Badge>}
+              {b.status === "completed" ? <Badge tone="green">Completed</Badge> : <Badge tone="slate">Void</Badge>}
+              <span className="text-[12px] text-slate-600">{payLabel(b)}</span>
+            </div>
+            <div className="mt-3 flex justify-end border-t border-slate-100 pt-3">{rowActions(b)}</div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden overflow-hidden rounded-2xl border border-slate-100 shadow-[0_2px_10px_-2px_rgba(15,23,42,.08)] md:block">
         <div className="overflow-x-auto adm-scroll">
-            <table className="w-full min-w-[820px]">
+            <table className="w-full min-w-[780px]">
               <thead>
                 <tr className="border-b border-slate-100">
                   <th className={th}>Invoice no</th>
@@ -273,9 +332,6 @@ export default function OrdersPage() {
                     <td className={td}>
                       <button type="button" onClick={() => setBill(b)} className="inline-flex items-center gap-2 font-bold text-red-600">
                         {b.invoiceNo}
-                        <span className="grid h-6 w-6 place-items-center rounded-md bg-slate-50 text-slate-400">
-                          <Icon name="external" size={13} />
-                        </span>
                       </button>
                     </td>
                     <td className={cx(td, "font-semibold text-slate-800")}>{b.customerName || "—"}</td>
@@ -286,27 +342,7 @@ export default function OrdersPage() {
                     <td className={cx(td, "text-slate-600")}>{fmtDate(b.createdAt)}</td>
                     <td className={cx(td, "text-center")}>{b.status === "completed" ? <Badge tone="green">Completed</Badge> : <Badge tone="slate">Void</Badge>}</td>
                     <td className={cx(td, "text-right")}>
-                      <span className="inline-flex gap-1.5">
-                        {b.customerPhone && (
-                          <a suppressHydrationWarning href={waLink(b.customerPhone, billText(b, s.settings.shopName, s.settings.publicUrl))} target="_blank" rel="noopener noreferrer" title="Send on WhatsApp" aria-label="Send on WhatsApp" className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-50 text-[#22c55e] hover:bg-emerald-100">
-                            <WaIcon size={18} />
-                          </a>
-                        )}
-                        <button type="button" title="View details" aria-label="View details" onClick={() => setBill(b)} className="grid h-9 w-9 place-items-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">
-                          <Icon name="eye" size={16} />
-                        </button>
-                        <button type="button" title="Edit details" aria-label="Edit details" onClick={() => setEditing(b)} className="grid h-9 w-9 place-items-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">
-                          <Icon name="edit" size={16} />
-                        </button>
-                        <button type="button" title="Print receipt" aria-label="Print receipt" onClick={() => setPrintFor(b)} className="grid h-9 w-9 place-items-center rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200">
-                          <Icon name="print" size={16} />
-                        </button>
-                        {role === "admin" && (
-                          <button type="button" title="Delete bill" aria-label="Delete bill" onClick={() => remove(b)} className="grid h-9 w-9 place-items-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100">
-                            <Icon name="trash" size={16} />
-                          </button>
-                        )}
-                      </span>
+                      {rowActions(b)}
                     </td>
                   </tr>
                 ))}
@@ -319,6 +355,13 @@ export default function OrdersPage() {
           )}
         </div>
       </div>
+      {!count && (
+        <div className="md:hidden">
+          <Empty icon="billing" title={loading ? "Loading bills…" : "No bills match"}>
+            {loading ? null : "Settled tabs and counter bills show up here."}
+          </Empty>
+        </div>
+      )}
       {count > 0 && (
         <div className="mt-4 flex flex-col items-center gap-3 text-[13px] text-slate-500">
           <span>
@@ -453,10 +496,24 @@ export default function OrdersPage() {
                 </div>
               )}
               {bill.isGst ? (
-                <div className="flex justify-between">
-                  <dt className="text-slate-500">GST ({bill.gstPercent}%) on {rupee(bill.taxableAmount)}</dt>
-                  <dd>{rupee(bill.gstAmount)}</dd>
-                </div>
+                <>
+                  <div className="flex justify-between">
+                    <dt className="text-slate-500">Taxable amount</dt>
+                    <dd>{rupee(bill.taxableAmount)}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-slate-500">CGST ({gstSplit(bill.gstPercent, bill.gstAmount).rate}%)</dt>
+                    <dd>{rupee(gstSplit(bill.gstPercent, bill.gstAmount).cgst)}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-slate-500">SGST ({gstSplit(bill.gstPercent, bill.gstAmount).rate}%)</dt>
+                    <dd>{rupee(gstSplit(bill.gstPercent, bill.gstAmount).sgst)}</dd>
+                  </div>
+                  <div className="flex justify-between font-semibold text-slate-700">
+                    <dt>Total GST ({bill.gstPercent}%)</dt>
+                    <dd>{rupee(bill.gstAmount)}</dd>
+                  </div>
+                </>
               ) : (
                 <div className="flex justify-between text-slate-400">
                   <dt>Non-GST bill</dt>
@@ -495,7 +552,7 @@ let itemSeq = 0; // keys for the item rows in the edit form
    back or takes it out. A bill that earned or used loyalty points, or a voided one, keeps its
    amounts — void it and bill again for those. Staff edits go to the admin to approve. */
 function EditBill({ b, admin, onClose, onSaved }: { b: Bill; admin: boolean; onClose: () => void; onSaved: (b: Bill) => void }) {
-  const { act, toast } = useAdmin();
+  const { act, toast, s: shop } = useAdmin();
   const [f, setF] = useState({
     customerName: b.customerName,
     customerPhone: b.customerPhone,
@@ -586,7 +643,7 @@ function EditBill({ b, admin, onClose, onSaved }: { b: Bill; admin: boolean; onC
 
         <section>
           <div className="mb-2 flex items-center justify-between">
-            <span className={lbl}>Items</span>
+            <span className={lbl}>Items <span className="ml-1 font-medium normal-case tracking-normal text-slate-400">— pick from your inventory, the price fills in</span></span>
             {!amountsLocked && (
               <Btn size="sm" icon="plus" onClick={() => setItems((xs) => [...xs, { key: ++itemSeq, productId: null, name: "", price: "", qty: 1 }])}>
                 Add item
@@ -600,8 +657,22 @@ function EditBill({ b, admin, onClose, onSaved }: { b: Bill; admin: boolean; onC
           )}
           <ul className="space-y-2">
             {items.map((i) => (
-              <li key={i.key} className="grid grid-cols-[1fr_88px_72px_auto] items-center gap-2">
-                <input className={inputCls} disabled={amountsLocked} value={i.name} maxLength={120} placeholder="Item" onChange={(e) => setItem(i.key, { name: e.target.value })} aria-label="Item name" />
+              <li key={i.key} className="grid grid-cols-[minmax(0,1fr)_72px_auto] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_88px_72px_auto]">
+                {amountsLocked ? (
+                  <input className={cx(inputCls, "col-span-3 sm:col-span-1")} disabled value={i.name} aria-label="Item name" readOnly />
+                ) : (
+                  <ItemSelect
+                    className="col-span-3 h-11 sm:col-span-1"
+                    products={shop.products}
+                    value={i.productId ?? ""}
+                    none={i.name || "Pick an item from inventory…"}
+                    title="Pick an item from your inventory"
+                    onChange={(id) => {
+                      const p = shop.products.find((x) => x.id === id);
+                      if (p) setItem(i.key, { productId: p.id, name: p.name, price: String(p.price) });
+                    }}
+                  />
+                )}
                 <input className={cx(inputCls, "text-right")} disabled={amountsLocked} type="number" min={0} step="0.5" inputMode="decimal" value={i.price} placeholder="Price" onChange={(e) => setItem(i.key, { price: e.target.value })} aria-label="Price" />
                 <input className={cx(inputCls, "text-right")} disabled={amountsLocked} type="number" min={1} max={999} step={1} inputMode="numeric" value={i.qty} onChange={(e) => setItem(i.key, { qty: Math.max(1, Math.min(999, Math.floor(Number(e.target.value)) || 1)) })} aria-label="Quantity" />
                 {!amountsLocked && items.length > 1 ? (
@@ -659,10 +730,20 @@ function EditBill({ b, admin, onClose, onSaved }: { b: Bill; admin: boolean; onC
               </div>
             )}
             {(amountsLocked ? b.isGst : f.isGst) && (
-              <div className="flex justify-between">
-                <dt className="text-slate-500">GST ({amountsLocked ? b.gstPercent : calc.gstPercent}%)</dt>
-                <dd>{rupee(amountsLocked ? b.gstAmount : calc.gstAmount)}</dd>
-              </div>
+              <>
+                <div className="flex justify-between">
+                  <dt className="text-slate-500">CGST ({gstSplit(amountsLocked ? b.gstPercent : calc.gstPercent, amountsLocked ? b.gstAmount : calc.gstAmount).rate}%)</dt>
+                  <dd>{rupee(gstSplit(amountsLocked ? b.gstPercent : calc.gstPercent, amountsLocked ? b.gstAmount : calc.gstAmount).cgst)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-slate-500">SGST ({gstSplit(amountsLocked ? b.gstPercent : calc.gstPercent, amountsLocked ? b.gstAmount : calc.gstAmount).rate}%)</dt>
+                  <dd>{rupee(gstSplit(amountsLocked ? b.gstPercent : calc.gstPercent, amountsLocked ? b.gstAmount : calc.gstAmount).sgst)}</dd>
+                </div>
+                <div className="flex justify-between font-semibold text-slate-700">
+                  <dt>Total GST ({amountsLocked ? b.gstPercent : calc.gstPercent}%)</dt>
+                  <dd>{rupee(amountsLocked ? b.gstAmount : calc.gstAmount)}</dd>
+                </div>
+              </>
             )}
             <div className="flex justify-between border-t border-slate-200 pt-2 text-[16px]">
               <dt className="font-bold">Invoice total</dt>

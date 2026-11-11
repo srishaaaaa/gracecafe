@@ -22,7 +22,6 @@ const ADMIN_ONLY_OPS = new Set([
   "expcat.save",
   "expcat.delete",
   "product.delete",
-  "product.family.save", // can add and remove whole sets of variants
   "category.rename",
   "category.delete",
   "bill.delete",

@@ -57,41 +57,67 @@ export function UpiPay({ tab, shop, phone, onView }: { tab: Tab; shop: string; p
   }
   return (
     <section className="tm-upi" aria-label="Pay by UPI">
-      <h4>
-        Pay <b>{rupee(amount)}</b> by UPI
-      </h4>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-        <a className="tm-upi__open" style={{ background: "#1a73e8" }} href={ready ? apps.gpay : undefined} aria-disabled={!ready}>
+      <header className="tm-upi__head">
+        <h4>
+          Pay <b>{rupee(amount)}</b> by UPI
+        </h4>
+        <p className="tm-upi__sub">Choose your app</p>
+      </header>
+      <div className="tm-upi__apps">
+        <a className="tm-upi__app tm-upi__app--gpay" href={ready ? apps.gpay : undefined} aria-disabled={!ready}>
           Google Pay
         </a>
-        <a className="tm-upi__open" style={{ background: "#5f259f" }} href={ready ? apps.phonepe : undefined} aria-disabled={!ready}>
+        <a className="tm-upi__app tm-upi__app--phonepe" href={ready ? apps.phonepe : undefined} aria-disabled={!ready}>
           PhonePe
         </a>
-        <a className="tm-upi__open" style={{ background: "#00b9f1" }} href={ready ? apps.paytm : undefined} aria-disabled={!ready}>
+        <a className="tm-upi__app tm-upi__app--paytm" href={ready ? apps.paytm : undefined} aria-disabled={!ready}>
           Paytm
         </a>
       </div>
-      <div className="tm-upi__qr">{ready ? <Qr text={link} className="tm-upi__svg" color="#1f2218" /> : <div className="tm-upi__svg" style={{ aspectRatio: "1" }} aria-hidden="true" />}</div>
-      <p className="tm-upi__hint">
-        Tap your app: it opens with the amount ready. If it can&apos;t, scan the QR or enter the UPI ID in the app. New QR in <b>{ready ? mmss(left) : "…"}</b>.
-      </p>
-      <p className="tm-upi__id">
-        Pay to <b>{upi.name}</b>
-        <br />
-        UPI ID <b>{upi.id}</b>{" "}
-        <button type="button" onClick={() => copy("id", upi.id)}>
-          {copied === "id" ? "Copied ✓" : "Copy"}
-        </button>
-        {upi.phone && (
-          <>
-            <br />
-            Or GPay number <b>{spacedPhone(upi.phone)}</b>{" "}
-            <button type="button" onClick={() => copy("phone", upi.phone)}>
-              {copied === "phone" ? "Copied ✓" : "Copy"}
-            </button>
-          </>
-        )}
-      </p>
+      <p className="tm-upi__hint">Tap your app: it opens with the amount ready. If it can&apos;t, scan the QR or enter the UPI ID in the app.</p>
+      <div className="tm-upi__body">
+        <figure className="tm-upi__qrbox">
+          <div className="tm-upi__qr">{ready ? <Qr text={link} className="tm-upi__svg" color="#1f2218" /> : <div className="tm-upi__svg" style={{ aspectRatio: "1" }} aria-hidden="true" />}</div>
+          <figcaption>
+            Scan with any UPI app
+            <small>
+              New QR in <b>{ready ? mmss(left) : "…"}</b>
+            </small>
+          </figcaption>
+        </figure>
+        <dl className="tm-upi__rows">
+          <div>
+            <dt>Pay to</dt>
+            <dd>{upi.name}</dd>
+          </div>
+          <div>
+            <dt>UPI ID</dt>
+            <dd>
+              <span className="tm-upi__val">{upi.id}</span>
+              <button type="button" onClick={() => copy("id", upi.id)}>
+                {copied === "id" ? "Copied ✓" : "Copy"}
+              </button>
+            </dd>
+          </div>
+          {upi.phone && (
+            <div>
+              <dt>GPay number</dt>
+              <dd>
+                <span className="tm-upi__val">{spacedPhone(upi.phone)}</span>
+                <button type="button" onClick={() => copy("phone", upi.phone)}>
+                  {copied === "phone" ? "Copied ✓" : "Copy"}
+                </button>
+              </dd>
+            </div>
+          )}
+          <div>
+            <dt>Amount</dt>
+            <dd>
+              <span className="tm-upi__val">{rupee(amount)}</span>
+            </dd>
+          </div>
+        </dl>
+      </div>
       {claimedFull ? (
         <div className="tm-upi__done">
           <b>Thanks — the counter will confirm your payment ✓</b>

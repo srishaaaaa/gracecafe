@@ -11,6 +11,14 @@ export const rupee = (n: number) => `₹${inr.format(Math.round(n * 100) / 100)}
 
 export const round2 = (n: number) => Math.round(n * 100) / 100;
 
+/** GST on an intra-state bill splits equally into CGST and SGST: each half carries half the rate (5% → 2.5% + 2.5%) and half
+    the amount. An odd paisa goes to SGST, so the two halves always add up exactly to the GST charged. */
+export function gstSplit(gstPercent: number, gstAmount: number) {
+  const cgst = round2(gstAmount / 2);
+  const sgst = round2(gstAmount - cgst);
+  return { rate: String(Number((gstPercent / 2).toFixed(3))), cgst, sgst };
+}
+
 type Paid = { payment: "cash" | "upi" | "card" | "split"; cashAmount: number; upiAmount: number; cardAmount: number; upiChannel?: string };
 
 /** "UPI", or "UPI · WhatsApp payment link" when it is known how the payment arrived. */

@@ -140,7 +140,7 @@ export default function StockMovementsPage() {
         <Kpi label="Adjustments" value={`${st.adjusted > 0 ? "+" : ""}${st.adjusted}`} hint="Manual corrections" icon="sliders" tone="amber" />
       </div>
 
-      <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(0,1fr)_340px]">
         <Card title="Timeline">
           {!rows.length ? (
             <Empty icon="box" title={loading ? "Loading…" : needle || type !== "all" || pid !== "all" || period !== "all" ? "No movements match" : "No stock movements yet"}>
@@ -180,9 +180,9 @@ export default function StockMovementsPage() {
 
               {/* desktops: table with a proper Reason column */}
               <div className="adm-scroll hidden overflow-x-auto xl:block">
-                <table className="w-full min-w-[860px] table-fixed">
+                <table className="w-full min-w-[900px] table-fixed">
                   <colgroup>
-                    <col className="w-[150px]" />
+                    <col className="w-[185px]" />
                     <col className="w-[170px]" />
                     <col className="w-[190px]" />
                     <col className="w-[80px]" />
@@ -202,7 +202,7 @@ export default function StockMovementsPage() {
                   <tbody>
                     {rows.map((m) => (
                       <tr key={m.id} className="border-b border-slate-100 align-top last:border-0">
-                        <td className={cx(td, "text-slate-600")}>{fmtDateTime(m.createdAt)}</td>
+                        <td className={cx(td, "whitespace-nowrap text-slate-600")}>{fmtDateTime(m.createdAt)}</td>
                         <td className={cx(td, "break-words font-semibold text-slate-900")}>{m.productName}</td>
                         <td className={td}>
                           <Badge tone={TYPE[m.type][1]}>{TYPE[m.type][0]}</Badge>

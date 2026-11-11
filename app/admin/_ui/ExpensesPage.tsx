@@ -145,14 +145,47 @@ export default function ExpensesPage() {
         <Kpi label="Entries" value={st.count} hint="Matching the filters" icon="list" tone="sky" />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <Card title="Expense log">
           {!st.rows.length ? (
             <Empty icon="bag" title={s.expenses.length ? "No expenses match" : "No expenses yet"}>
               {s.expenses.length ? null : "Add rent, ingredients, salaries… and Analytics will show net earnings."}
             </Empty>
           ) : (
-            <div className="overflow-x-auto adm-scroll">
+            <>
+            {/* phones: one card per expense, so nothing hides off to the side */}
+            <ul className="space-y-2.5 md:hidden">
+              {slice.map((e) => (
+                <li key={e.id} className="rounded-2xl border border-slate-100 bg-white p-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <b className="block truncate text-[14px] text-slate-900">{e.title}</b>
+                      <span className="block text-[12px] text-slate-500">{ddmmyyyy(e.expenseDate)} · <span className="uppercase">{e.paymentMode}</span></span>
+                      {e.notes && <span className="mt-0.5 block truncate text-[11.5px] text-slate-400">{e.notes}</span>}
+                    </div>
+                    <b className="shrink-0 text-[16px] text-slate-900">{rupee(e.amount)}</b>
+                  </div>
+                  <div className="mt-2.5 flex items-center justify-between gap-3">
+                    <Badge tone="orange">{e.category}</Badge>
+                    <span className="inline-flex gap-4 text-[11.5px] font-extrabold uppercase">
+                      <button type="button" className="text-blue-600" onClick={() => open(e)}>
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="text-red-600"
+                        onClick={async () => {
+                          if (await confirm({ title: `Delete “${e.title}”?`, body: `${rupee(e.amount)} will no longer count against revenue.`, ok: "Delete", danger: true })) await act("expense.delete", { id: e.id });
+                        }}
+                      >
+                        Del
+                      </button>
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden overflow-x-auto adm-scroll md:block">
               <table className="w-full min-w-[640px]">
                 <thead className="bg-slate-50">
                   <tr>
@@ -197,6 +230,7 @@ export default function ExpensesPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
               {pages > 1 && (
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3 px-1 text-[12.5px] text-slate-500">
                   <span>
@@ -209,7 +243,7 @@ export default function ExpensesPage() {
                   </span>
                 </div>
               )}
-            </div>
+            </>
           )}
         </Card>
 

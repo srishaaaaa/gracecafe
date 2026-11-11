@@ -1,5 +1,5 @@
 import type { Bill, ShopDetails } from "@/lib/types";
-import { TZ, inr2 as inr, loyaltySummary, numberToWords, payLabel, payParts, rupee } from "@/lib/money";
+import { TZ, gstSplit, inr2 as inr, loyaltySummary, numberToWords, payLabel, payParts, rupee } from "@/lib/money";
 import { fmtDateTime } from "./kit";
 
 
@@ -22,7 +22,10 @@ export function billText(b: Bill, shop: string, publicUrl = "") {
     b.rewardDiscount ? `Reward ${b.rewardName ?? ""}: -${rupee(b.rewardDiscount)}` : "",
     b.pointsDiscount ? `Loyalty points (${b.pointsRedeemed} pts): -${rupee(b.pointsDiscount)}` : "",
     b.extra ? `Extra charges: ${rupee(b.extra)}` : "",
-    b.isGst ? `GST (${b.gstPercent}%) on ${rupee(b.taxableAmount)}: ${rupee(b.gstAmount)}` : "",
+    b.isGst ? `Taxable amount: ${rupee(b.taxableAmount)}` : "",
+    b.isGst ? `CGST (${gstSplit(b.gstPercent, b.gstAmount).rate}%): ${rupee(gstSplit(b.gstPercent, b.gstAmount).cgst)}` : "",
+    b.isGst ? `SGST (${gstSplit(b.gstPercent, b.gstAmount).rate}%): ${rupee(gstSplit(b.gstPercent, b.gstAmount).sgst)}` : "",
+    b.isGst ? `Total GST (${b.gstPercent}%): ${rupee(b.gstAmount)}` : "",
     `*Grand total: ${rupee(b.total)}*`,
     `Paid by ${payLabel(b)}`,
     b.payment === "split" ? `  ${payParts(b).map(([m, n]) => `${m} ${rupee(n)}`).join(" · ")}` : "",
@@ -52,7 +55,7 @@ const ROLL_MM = { 2: [58, 48], 3: [80, 72] } as const;
 const pageCss = (f: PrintFormat) =>
   f.kind === "thermal"
     ? `@page{size:${ROLL_MM[f.roll][0]}mm 297mm;margin:2mm 0}`
-    : `@page{size:${f.size};margin:${f.size === "A3" ? 16 : f.size === "A4" ? 12 : 8}mm}`;
+    : `@page{size:${f.size};margin:0}.inv{box-sizing:border-box;padding:${f.size === "A3" ? 16 : f.size === "A4" ? 12 : 8}mm}`;
 
 /** The shop's printed header lines, built from Settings. */
 export function headerLines(d?: ShopDetails): string[] {
@@ -243,7 +246,15 @@ function Sheet({ b, shop, logo, details, size }: { b: Bill; shop: string; logo?:
                 <dd>₹{inr(b.taxableAmount)}</dd>
               </div>
               <div>
-                <dt>GST ({b.gstPercent}%)</dt>
+                <dt>CGST ({gstSplit(b.gstPercent, b.gstAmount).rate}%)</dt>
+                <dd>₹{inr(gstSplit(b.gstPercent, b.gstAmount).cgst)}</dd>
+              </div>
+              <div>
+                <dt>SGST ({gstSplit(b.gstPercent, b.gstAmount).rate}%)</dt>
+                <dd>₹{inr(gstSplit(b.gstPercent, b.gstAmount).sgst)}</dd>
+              </div>
+              <div>
+                <dt>Total GST ({b.gstPercent}%)</dt>
                 <dd>₹{inr(b.gstAmount)}</dd>
               </div>
             </>
@@ -299,10 +310,13 @@ function Thermal({ b, shop, logo, lines, roll }: { b: Bill; shop: string; logo?:
       <hr />
       {b.isGst && <p className="c">TAX INVOICE</p>}
       <div className="row">
+        <span>Invoice</span>
         <span>{b.invoiceNo}</span>
-        <span>{b.source === "tab" ? "Customer tab" : "Counter"}</span>
       </div>
-      <div>{fmtDateTime(b.createdAt)}</div>
+      <div className="row">
+        <span>{fmtDateTime(b.createdAt)}</span>
+      </div>
+      <div>{b.source === "tab" ? "Customer tab" : "Counter bill"}</div>
       {b.customerName && <div>{b.customerName}{b.customerPhone ? ` · ${b.customerPhone}` : ""}</div>}
       <hr />
       {b.items.map((i, k) => (
@@ -354,10 +368,24 @@ function Thermal({ b, shop, logo, lines, roll }: { b: Bill; shop: string; logo?:
         </div>
       )}
       {b.isGst && (
-        <div className="row">
-          <span>GST ({b.gstPercent}%)</span>
-          <span>{rupee(b.gstAmount)}</span>
-        </div>
+        <>
+          <div className="row">
+            <span>Taxable amount</span>
+            <span>{rupee(b.taxableAmount)}</span>
+          </div>
+          <div className="row">
+            <span>CGST ({gstSplit(b.gstPercent, b.gstAmount).rate}%)</span>
+            <span>{rupee(gstSplit(b.gstPercent, b.gstAmount).cgst)}</span>
+          </div>
+          <div className="row">
+            <span>SGST ({gstSplit(b.gstPercent, b.gstAmount).rate}%)</span>
+            <span>{rupee(gstSplit(b.gstPercent, b.gstAmount).sgst)}</span>
+          </div>
+          <div className="row">
+            <span>Total GST ({b.gstPercent}%)</span>
+            <span>{rupee(b.gstAmount)}</span>
+          </div>
+        </>
       )}
       <hr />
       <div className="row big">

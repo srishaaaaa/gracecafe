@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { billForInvoice } from "@/lib/ops";
 import { getConfig } from "@/lib/loyalty/server";
 import { db } from "@/lib/db";
-import { TZ, inr2 as inr, loyaltySummary, numberToWords, payLabel, payParts } from "@/lib/money";
+import { TZ, gstSplit, inr2 as inr, loyaltySummary, numberToWords, payLabel, payParts } from "@/lib/money";
 import { InvoiceActions } from "./InvoiceActions";
 
 export const dynamic = "force-dynamic";
@@ -38,9 +38,9 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
     <div className={`flex min-h-screen flex-col items-center bg-zinc-100/70 font-sans text-zinc-900 print:m-0 print:bg-white print:p-0 ${isEmbed ? "p-2 sm:p-4" : "px-3 py-8 sm:px-6"}`}>
       <style>{`
         @media print {
-          @page { size: A4 portrait; margin: 12mm 10mm; }
+          @page { size: A4 portrait; margin: 0; }
           html, body { background: #fff !important; color: #000 !important; margin: 0 !important; padding: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .invoice-sheet { border: none !important; box-shadow: none !important; max-width: 100% !important; width: 100% !important; padding: 0 !important; }
+          .invoice-sheet { border: none !important; box-shadow: none !important; max-width: 100% !important; width: 100% !important; box-sizing: border-box !important; padding: 12mm 10mm !important; }
         }
       `}</style>
 
@@ -220,8 +220,16 @@ export default async function InvoicePage({ params, searchParams }: { params: Pr
                   <span className="font-mono text-zinc-800">₹{inr(b.taxableAmount)}</span>
                 </div>
                 <div className="flex justify-between text-zinc-800">
-                  <span>GST ({b.gstPercent}%)</span>
-                  <span className="font-mono text-zinc-900">₹{inr(b.gstAmount)}</span>
+                  <span>CGST ({gstSplit(b.gstPercent, b.gstAmount).rate}%)</span>
+                  <span className="font-mono text-zinc-900">₹{inr(gstSplit(b.gstPercent, b.gstAmount).cgst)}</span>
+                </div>
+                <div className="flex justify-between text-zinc-800">
+                  <span>SGST ({gstSplit(b.gstPercent, b.gstAmount).rate}%)</span>
+                  <span className="font-mono text-zinc-900">₹{inr(gstSplit(b.gstPercent, b.gstAmount).sgst)}</span>
+                </div>
+                <div className="flex justify-between border-t border-dashed border-zinc-200 pt-1 font-semibold text-zinc-900">
+                  <span>Total GST ({b.gstPercent}%)</span>
+                  <span className="font-mono">₹{inr(b.gstAmount)}</span>
                 </div>
               </>
             )}
