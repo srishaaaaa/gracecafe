@@ -259,6 +259,14 @@ export type ExpenseCategory = {
 export type StockMoveType = "initial" | "added" | "removed" | "sale" | "cancelled_order" | "void_bill" | "adjustment" | "gift";
 
 /** One page of the stock ledger plus totals for the whole selected period. */
+/** One page of bills for Order Management, plus the payment-method totals for everything the filters match. */
+export type OrdersPageData = {
+  rows: Bill[];
+  /** bills matching every filter (what "Show more" is working through) */
+  total: number;
+  boxes: Record<"all" | "cash" | "upi" | "card" | "split", { amount: number; count: number }>;
+};
+
 export type StockLedger = {
   rows: StockMovement[];
   total: number;

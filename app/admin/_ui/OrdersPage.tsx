@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { UPI_CHANNELS, type Bill, type Coupon, type UpiChannel } from "@/lib/types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { UPI_CHANNELS, type Bill, type Coupon, type OrdersPageData, type UpiChannel } from "@/lib/types";
 import { computeBill, payLabel, payParts, round2, rupee, shopToday } from "@/lib/money";
-import { inRange, rangeOf, type Period } from "@/lib/analytics";
+import { rangeOf, type Period } from "@/lib/analytics";
 import { useAdmin } from "./Store";
 import { billText, waLink } from "./receipt";
 import PrintModal from "./PrintModal";
@@ -13,9 +13,6 @@ import { Badge, Btn, Empty, Field, Icon, Modal, Page, PageHead, SearchBox, Switc
 type DateF = Extract<Period, "today" | "week" | "month" | "custom"> | "any";
 type PayF = "all" | "cash" | "upi" | "card" | "split";
 
-/* A bill belongs to a payment filter when that method took part in it (a split bill shows
-   under every method it used, and under "Split" itself). */
-const payHit = (b: Bill, f: PayF) => f === "all" || (f === "split" ? b.payment === "split" : f === "cash" ? b.cashAmount > 0 : f === "upi" ? b.upiAmount > 0 : b.cardAmount > 0);
 
 
 const th = "px-3 py-4 text-left text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-500 whitespace-nowrap";
@@ -50,7 +47,6 @@ export default function OrdersPage() {
   const [q, setQ] = useState("");
   const [pay, setPay] = useState<PayF>("all");
   const [editing, setEditing] = useState<Bill | null>(null);
-  const [shown, setShown] = useState(BATCH); // how many invoices are listed; "Show more" adds another batch
   const [bill, setBill] = useState<Bill | null>(null);
   const [printFor, setPrintFor] = useState<Bill | null>(null);
 
@@ -65,54 +61,83 @@ export default function OrdersPage() {
     }
   };
 
+  /* The list is fetched from the server 100 bills at a time ("Show more" fetches the next 100), and the payment-method
+     boxes are totals over every matching bill — so the page stays quick and correct however many bills the shop has. */
   const range = date === "any" ? null : rangeOf(date, from, to);
-  const needle = q.trim().toLowerCase();
+  const rf = range && Number.isFinite(range.from) ? range.from : 0;
+  const rt = range && Number.isFinite(range.to) ? range.to : 0;
+  const needle = q.trim();
+  const query = useMemo(() => ({ type, pay, q: needle, from: rf || "", to: rt || "" }), [type, pay, needle, rf, rt]);
+  const key = JSON.stringify(query);
 
-  /* everything except the payment filter — the boxes below are totals of this */
-  const base = useMemo(
-    () =>
-      s.bills
-        .filter((b) => (type === "all" || b.source === type) && inRange(b.createdAt, range))
-        .filter((b) => !needle || `${b.invoiceNo} ${b.customerName} ${b.customerPhone} ${b.couponCode ?? ""} ${b.items.map((i) => i.name).join(" ")}`.toLowerCase().includes(needle)),
-    [s.bills, type, range, needle],
-  );
-  const bills = useMemo(() => base.filter((b) => payHit(b, pay)).sort((a, b) => b.createdAt - a.createdAt), [base, pay]);
+  type Loaded = { key: string; rows: Bill[]; total: number; boxes: OrdersPageData["boxes"] };
+  const [data, setData] = useState<Loaded | null>(null);
+  const [moreBusy, setMoreBusy] = useState(false);
+  const loaded = useRef({ key: "", n: BATCH });
+  const fetchPage = (qs: Record<string, string | number>, offset: number, size: number, extra = "") => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(qs)) if (v !== "" && v !== undefined) p.set(k, String(v));
+    p.set("offset", String(offset));
+    p.set("size", String(size));
+    return fetch(`/api/admin/orders?${p}${extra}`, { cache: "no-store" }).then((r) => r.json());
+  };
 
-  /* money collected per payment method, from the completed bills in the date / type / search filters */
-  const boxes = useMemo(() => {
-    const done = base.filter((b) => b.status === "completed");
-    const of = (f: PayF, amt: (b: Bill) => number) => {
-      const hit = done.filter((b) => payHit(b, f));
-      return { amount: round2(hit.reduce((n, b) => n + amt(b), 0)), count: hit.length };
+  /* Reload when a filter changes (back to the first 100) or when anything in the shop changes (an edit, a new bill),
+     keeping as many bills on screen as were already loaded. */
+  useEffect(() => {
+    let dead = false;
+    const size = loaded.current.key === key ? Math.max(BATCH, loaded.current.n) : BATCH;
+    fetchPage(JSON.parse(key), 0, size)
+      .then((d: OrdersPageData & { error?: string }) => {
+        if (dead || d.error) return;
+        loaded.current = { key, n: d.rows.length };
+        setData({ key, rows: d.rows, total: d.total, boxes: d.boxes });
+      })
+      .catch(() => {});
+    return () => {
+      dead = true;
     };
-    return {
-      all: { amount: round2(done.reduce((n, b) => n + b.total, 0)), count: done.length },
-      cash: of("cash", (b) => b.cashAmount),
-      upi: of("upi", (b) => b.upiAmount),
-      card: of("card", (b) => b.cardAmount),
-      split: of("split", (b) => b.total),
-    };
-  }, [base]);
+  }, [key, s.version]);
 
-  /* A new filter starts the list again from the first 100. */
-  const pageKey = JSON.stringify([type, date, from, to, needle, pay]);
-  const [seenKey, setSeenKey] = useState(pageKey);
-  if (seenKey !== pageKey) {
-    setSeenKey(pageKey);
-    setShown(BATCH);
-  }
+  const showMore = async () => {
+    if (!data || moreBusy || data.key !== key) return;
+    setMoreBusy(true);
+    try {
+      const d: OrdersPageData & { error?: string } = await fetchPage(query, data.rows.length, BATCH);
+      if (d.error) return;
+      const have = new Set(data.rows.map((r) => r.id));
+      const rows = [...data.rows, ...d.rows.filter((r) => !have.has(r.id))];
+      loaded.current = { key, n: rows.length };
+      setData({ ...data, rows, total: d.total, boxes: d.boxes });
+    } finally {
+      setMoreBusy(false);
+    }
+  };
 
-  /* The bills on screen as an Excel workbook with real columns. */
-  const exportRows = (): (string | number)[][] => [
-    ["Invoice", "Type", "Customer", "Mobile", "Items", "Subtotal", "Coupon", "Coupon discount", "Manual discount", "Extra", "Bill type", "GST %", "Taxable amount", "GST amount", "Total", "Payment", "UPI came through", "Cash", "UPI", "Card", "Status", "Date", "Time", "Reward", "Reward discount", "Points redeemed", "Points discount", "Points earned"],
-    ...bills.map((b) => [b.invoiceNo, b.source, b.customerName, b.customerPhone, b.itemCount, b.subtotal, b.couponCode ?? "", b.couponDiscount, b.manualDiscount, b.extra, b.isGst ? "GST" : "Non-GST", b.gstPercent, b.taxableAmount, b.gstAmount, b.total, b.payment, UPI_CHANNELS.find((c) => c.key === b.upiChannel)?.label ?? "", b.cashAmount, b.upiAmount, b.cardAmount, b.status, fmtDate(b.createdAt), fmtTime(b.createdAt), b.rewardName ?? "", b.rewardDiscount, b.pointsRedeemed, b.pointsDiscount, b.pointsEarned]),
-  ];
-  const stamp = () => new Date().toISOString().slice(0, 10);
-  const exportExcel = () => downloadExcel(`bills-${stamp()}.xlsx`, [{ name: "Bills", rows: exportRows() }]);
-
-  const count = bills.length;
-  const slice = bills.slice(0, shown);
+  const slice = data?.rows ?? [];
+  const count = data?.total ?? 0;
   const left = count - slice.length;
+  const loading = !data || data.key !== key;
+  const zero = { amount: 0, count: 0 };
+  const boxes = data?.boxes ?? { all: zero, cash: zero, upi: zero, card: zero, split: zero };
+
+  /* The Excel download covers every bill the filters match, not just the ones listed so far. */
+  const [exporting, setExporting] = useState(false);
+  const stamp = () => new Date().toISOString().slice(0, 10);
+  const exportExcel = async () => {
+    setExporting(true);
+    try {
+      const d: OrdersPageData & { error?: string } = await fetchPage(query, 0, 100, "&export=1");
+      if (d.error) return;
+      downloadExcel(`bills-${stamp()}.xlsx`, [{ name: "Bills", rows: exportRows(d.rows) }]);
+    } finally {
+      setExporting(false);
+    }
+  };
+  const exportRows = (list: Bill[]): (string | number)[][] => [
+    ["Invoice", "Type", "Customer", "Mobile", "Items", "Subtotal", "Coupon", "Coupon discount", "Manual discount", "Extra", "Bill type", "GST %", "Taxable amount", "GST amount", "Total", "Payment", "UPI came through", "Cash", "UPI", "Card", "Status", "Date", "Time", "Reward", "Reward discount", "Points redeemed", "Points discount", "Points earned"],
+    ...list.map((b) => [b.invoiceNo, b.source, b.customerName, b.customerPhone, b.itemCount, b.subtotal, b.couponCode ?? "", b.couponDiscount, b.manualDiscount, b.extra, b.isGst ? "GST" : "Non-GST", b.gstPercent, b.taxableAmount, b.gstAmount, b.total, b.payment, UPI_CHANNELS.find((c) => c.key === b.upiChannel)?.label ?? "", b.cashAmount, b.upiAmount, b.cardAmount, b.status, fmtDate(b.createdAt), fmtTime(b.createdAt), b.rewardName ?? "", b.rewardDiscount, b.pointsRedeemed, b.pointsDiscount, b.pointsEarned]),
+  ];
 
   return (
     <Page>
@@ -221,8 +246,8 @@ export default function OrdersPage() {
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
         <span className="text-[12.5px] font-semibold text-slate-600">{count} result(s)</span>
-        <button type="button" onClick={exportExcel} disabled={!count} className="inline-flex items-center gap-1.5 text-[13px] font-bold text-emerald-700 hover:underline disabled:opacity-40">
-          <Icon name="download" size={15} /> Export Excel
+        <button type="button" onClick={exportExcel} disabled={!count || exporting} className="inline-flex items-center gap-1.5 text-[13px] font-bold text-emerald-700 hover:underline disabled:opacity-40">
+          <Icon name="download" size={15} /> {exporting ? "Preparing…" : "Export Excel"}
         </button>
       </div>
 
@@ -288,8 +313,8 @@ export default function OrdersPage() {
               </tbody>
             </table>
           {!count && (
-            <Empty icon="billing" title="No bills match">
-              Settled tabs and counter bills show up here.
+            <Empty icon="billing" title={loading ? "Loading bills…" : "No bills match"}>
+              {loading ? null : "Settled tabs and counter bills show up here."}
             </Empty>
           )}
         </div>
@@ -300,8 +325,8 @@ export default function OrdersPage() {
             Showing <b className="text-slate-800">{slice.length}</b> of <b className="text-slate-800">{count}</b> invoice{count === 1 ? "" : "s"}
           </span>
           {left > 0 && (
-            <button type="button" onClick={() => setShown((n) => n + BATCH)} className="h-10 rounded-xl bg-slate-100 px-6 text-[13px] font-bold text-slate-800 transition hover:bg-slate-200">
-              Show {Math.min(BATCH, left)} more
+            <button type="button" onClick={showMore} disabled={moreBusy || loading} className="h-10 rounded-xl bg-slate-100 px-6 text-[13px] font-bold text-slate-800 transition hover:bg-slate-200 disabled:opacity-60">
+              {moreBusy ? "Loading…" : `Show ${Math.min(BATCH, left)} more`}
             </button>
           )}
         </div>

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, ilike, inArray, lte, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, ilike, inArray, lte, ne, or, sql } from "drizzle-orm";
 import { ApiError, mutate, read } from "./store";
 import { code, uid } from "./seed";
 import { TZ, checkCoupon, computeBill, round2, shopToday } from "./money";
@@ -8,7 +8,7 @@ import { batches, bills, coupons, expenseCategories, expenses, ingredients, meta
 import * as L from "./loyalty/server";
 import { pointsPerUnit } from "./loyalty/engine";
 import type { LoyaltyConfig } from "./loyalty/config";
-import { INGREDIENT_UNITS, UPI_CHANNELS, type AdminState, type Coupon, type UpiChannel, Bill, Ingredient, IngredientUnit, StockLedger, MenuItem, Order, OrderItem, OrderStatus, PayMethod, Product, PublicUser, Recipe, RecipeItem, Session, StaffUser, StockMoveType, TabClose, TabView, ShopDetails, BirthdayConfig } from "./types";
+import { INGREDIENT_UNITS, UPI_CHANNELS, type AdminState, type Coupon, type UpiChannel, Bill, Ingredient, IngredientUnit, StockLedger, OrdersPageData, MenuItem, Order, OrderItem, OrderStatus, PayMethod, Product, PublicUser, Recipe, RecipeItem, Session, StaffUser, StockMoveType, TabClose, TabView, ShopDetails, BirthdayConfig } from "./types";
 
 /* Every read/write the app makes, with validation. Route handlers are thin wrappers.
    Writes run inside store.mutate(), which serializes them and rolls back on error. */
@@ -499,6 +499,63 @@ export async function stockLedger(p: URLSearchParams): Promise<StockLedger> {
   const adjusted = sum("adjustment");
   const gifts = -sum("gift");
   return { rows, total: n, page, pages, stats: { added, sold, removed, returned, adjusted, gifts, net: added - sold - removed - gifts + returned + adjusted }, perProduct, products };
+}
+
+/** One page of bills for Order Management, newest first. The payment-method boxes are totals over EVERY bill the
+    filters match (not just this page), so a shop with thousands of bills loads 100 at a time and the numbers stay right.
+    Filters: type (all | tab | counter), pay (all | cash | upi | card | split), from/to (ms), q. Paging: offset + size
+    (?export=1 lifts the cap, for the Excel download). */
+export async function ordersPage(p: URLSearchParams): Promise<OrdersPageData> {
+  const type = p.get("type") ?? "all";
+  const pay = p.get("pay") ?? "all";
+  const from = Number(p.get("from")) || null;
+  const to = Number(p.get("to")) || null;
+  const q = (p.get("q") ?? "").trim().slice(0, 80).replace(/[\\%_]/g, (c) => "\\" + c);
+  const offset = Math.max(0, Math.floor(Number(p.get("offset"))) || 0);
+  const size = p.get("export") ? 100_000 : Math.min(2000, Math.max(1, Math.floor(Number(p.get("size"))) || 100));
+  const like = `%${q}%`;
+
+  // every filter except the payment method — the boxes are totals of this
+  const base = and(
+    type === "tab" || type === "counter" ? eq(bills.source, type) : undefined,
+    from ? gte(bills.createdAt, from) : undefined,
+    to ? lte(bills.createdAt, to) : undefined,
+    q ? or(ilike(bills.invoiceNo, like), ilike(bills.customerName, like), ilike(bills.customerPhone, like), sql`coalesce(${bills.couponCode}, '') ilike ${like}`, sql`${bills.items}::text ilike ${like}`) : undefined,
+  );
+  const payCond = pay === "cash" ? gt(bills.cashAmount, 0) : pay === "upi" ? gt(bills.upiAmount, 0) : pay === "card" ? gt(bills.cardAmount, 0) : pay === "split" ? eq(bills.payment, "split") : undefined;
+  const listed = and(base, payCond);
+
+  const done = sql`${bills.status} = 'completed'`;
+  const [rows, [n], [a]] = await Promise.all([
+    db.select().from(bills).where(listed).orderBy(desc(bills.createdAt), desc(bills.id)).limit(size).offset(offset),
+    db.select({ n: sql<number>`count(*)::int` }).from(bills).where(listed),
+    db
+      .select({
+        allN: sql<number>`count(*) filter (where ${done})::int`,
+        allAmt: sql<number>`coalesce(sum(${bills.total}) filter (where ${done}), 0)::float8`,
+        cashN: sql<number>`count(*) filter (where ${done} and ${bills.cashAmount} > 0)::int`,
+        cashAmt: sql<number>`coalesce(sum(${bills.cashAmount}) filter (where ${done} and ${bills.cashAmount} > 0), 0)::float8`,
+        upiN: sql<number>`count(*) filter (where ${done} and ${bills.upiAmount} > 0)::int`,
+        upiAmt: sql<number>`coalesce(sum(${bills.upiAmount}) filter (where ${done} and ${bills.upiAmount} > 0), 0)::float8`,
+        cardN: sql<number>`count(*) filter (where ${done} and ${bills.cardAmount} > 0)::int`,
+        cardAmt: sql<number>`coalesce(sum(${bills.cardAmount}) filter (where ${done} and ${bills.cardAmount} > 0), 0)::float8`,
+        splitN: sql<number>`count(*) filter (where ${done} and ${bills.payment} = 'split')::int`,
+        splitAmt: sql<number>`coalesce(sum(${bills.total}) filter (where ${done} and ${bills.payment} = 'split'), 0)::float8`,
+      })
+      .from(bills)
+      .where(base),
+  ]);
+  return {
+    rows,
+    total: n?.n ?? 0,
+    boxes: {
+      all: { amount: round2(a.allAmt), count: a.allN },
+      cash: { amount: round2(a.cashAmt), count: a.cashN },
+      upi: { amount: round2(a.upiAmt), count: a.upiN },
+      card: { amount: round2(a.cardAmt), count: a.cardN },
+      split: { amount: round2(a.splitAmt), count: a.splitN },
+    },
+  };
 }
 
 type Move = { type: StockMoveType; ref?: string; note?: string };
