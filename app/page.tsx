@@ -13,6 +13,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: `Order | ${await shopName()}`, robots: { index: false } };
 }
 
-export default async function Home() {
-  return <Menu initial={await tabView("")} />;
+export default async function Home({ searchParams }: PageProps<"/">) {
+  /* A table's QR carries its number: /?table=5. It rides along with every order from that phone. */
+  const t = (await searchParams).table;
+  const table = (Array.isArray(t) ? t[0] : t ?? "").replace(/[^A-Za-z0-9 -]/g, "").trim().slice(0, 12);
+  return <Menu initial={await tabView("")} table={table} />;
 }

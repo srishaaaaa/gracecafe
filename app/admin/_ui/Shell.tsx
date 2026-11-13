@@ -86,7 +86,7 @@ function Settings({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({
     shopName: d.shopName, ownerName: d.ownerName, location: d.location, address: d.address, address2: "",
     whatsapp1: d.whatsapp1, whatsapp2: "", customerCare: d.customerCare, email: d.email, mapsUrl: d.mapsUrl, logoUrl: d.logoUrl, publicUrl: d.publicUrl,
-    upiId: d.upiId, upiName: d.upiName, upiPhone: d.upiPhone, upiQrMinutes: String(d.upiQrMinutes),
+    upiId: d.upiId, upiName: d.upiName, upiPhone: d.upiPhone, upiQrMinutes: String(d.upiQrMinutes), tableCount: String(d.tableCount),
   });
   const [saving, setSaving] = useState(false);
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm({ ...form, [k]: e.target.value });
@@ -177,6 +177,10 @@ function Settings({ onClose }: { onClose: () => void }) {
             <Field label="GPay / PhonePe number (optional)" hint="10 digits, shown beside the UPI ID"><input className={inputCls} inputMode="numeric" value={form.upiPhone} maxLength={14} onChange={set("upiPhone")} placeholder="98765 43210" /></Field>
             <Field label="Change the QR every (minutes)" hint="A fresh QR replaces the old one"><input className={inputCls} type="number" min={1} max={30} inputMode="numeric" value={form.upiQrMinutes} onChange={set("upiQrMinutes")} /></Field>
           </div>
+        </Sec>
+
+        <Sec title="Tables" desc="Each table gets its own QR code, so every order shows which table it came from. Print the cards from Open tabs → Table QR cards.">
+          <Field label="Number of tables" hint="Tables are numbered 1 to this number. 0 = no tables (one shop QR only)."><input className={inputCls} type="number" min={0} max={200} inputMode="numeric" value={form.tableCount} onChange={set("tableCount")} /></Field>
         </Sec>
 
         <section className="divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-white p-4">

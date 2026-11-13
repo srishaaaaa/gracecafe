@@ -87,7 +87,7 @@ export default function KitchenPage() {
                       <li key={o.id} className={cx(CARD, hot && "border-red-200 ring-1 ring-red-100")}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <b className="block truncate text-[14px] text-slate-900">#{o.no} · {whoIs(o)}</b>
+                            <b className="block truncate text-[14px] text-slate-900">#{o.no} · {o.tableNo ? `T${o.tableNo} · ` : ""}{whoIs(o)}</b>
                             <p className="truncate text-[11.5px] text-slate-500">
                               {o.source === "customer" ? "Self-ordered" : "Counter"} · {fmtTime(o.createdAt)}
                             </p>

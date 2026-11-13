@@ -46,6 +46,8 @@ export const settings = pgTable("settings", {
   /** the shop's GPay / PhonePe mobile number — shown as another way to pay (blank = not shown) */
   upiPhone: text("upi_phone").notNull().default(""),
   upiQrMinutes: integer("upi_qr_minutes").notNull().default(5),
+  /** how many tables the shop has (tables are numbered 1..N for the table QR cards; 0 = none set up) */
+  tableCount: integer("table_count").notNull().default(0),
 });
 
 /** Single row (id = 1): the change counter the admin panel polls, and the order-number sequence. */
@@ -117,6 +119,8 @@ export const orders = pgTable(
     note: text("note").notNull().default(""),
     customerName: text("customer_name").notNull().default(""),
     customerPhone: text("customer_phone").notNull().default(""),
+    /** the table number carried by the QR the guest scanned ("" = no table: counter order or the plain shop QR) */
+    tableNo: text("table_no").notNull().default(""),
     status: text("status").$type<OrderStatus>().notNull(),
     source: text("source").$type<OrderSource>().notNull(),
     subtotal: money("subtotal").notNull(),

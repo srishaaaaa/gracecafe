@@ -43,6 +43,26 @@ export function QrSheet({ base, shop }: { base: string; shop: string }) {
   );
 }
 
+/** One QR card per table. Each QR opens the same menu with ?table=N, so every order says where it came from. */
+export function TableQrSheet({ base, shop, count }: { base: string; shop: string; count: number }) {
+  const root = base.replace(/\/+$/, "");
+  const nums = Array.from({ length: count }, (_, i) => i + 1);
+  return (
+    <div className="qr-sheet">
+      {nums.map((n) => (
+        <div className="qr-card" key={n}>
+          <span className="qr-card__brand">{shop}</span>
+          <span className="qr-card__lead">Table {n}</span>
+          <div className="qr-card__qr">
+            <Qr text={`${root}/?table=${n}`} />
+          </div>
+          <span className="qr-card__cta">Scan to order from your table</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function TabsPage({ focus }: { focus?: string }) {
   const { s, floor, act, confirm, toast, base, now, print } = useAdmin();
   const [sel, setSel] = useState<string | null>(focus ?? null);
@@ -84,6 +104,13 @@ export default function TabsPage({ focus }: { focus?: string }) {
           <>
             <Btn icon="print" onClick={() => print(<QrSheet base={base} shop={s.settings.shopName} />)}>
               Print QR card
+            </Btn>
+            <Btn icon="qr" onClick={() => {
+              const n = s.settings.tableCount;
+              if (n < 1) return toast({ kind: "info", title: "Set the number of tables first: Settings → Tables." });
+              print(<TableQrSheet base={base} shop={s.settings.shopName} count={n} />);
+            }}>
+              Table QR cards
             </Btn>
             <Btn kind="red" icon="plus" onClick={() => setStartForm({ name: "", phone: "" })}>
               Start a tab
@@ -250,7 +277,7 @@ export default function TabsPage({ focus }: { focus?: string }) {
                     <li key={o.id} className={cx("rounded-2xl border p-4", o.status === "new" ? "border-red-200 bg-red-50/30" : "border-slate-100", o.status === "cancelled" && "opacity-55")}>
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-[14px] font-bold text-slate-900">
-                          #{o.no} <span className="font-medium text-slate-400">· {fmtTime(o.createdAt)}</span>
+                          #{o.no} <span className="font-medium text-slate-400">· {fmtTime(o.createdAt)}{o.tableNo ? ` · Table ${o.tableNo}` : ""}</span>
                         </p>
                         <Badge tone={ORDER_BADGE[o.status][0]}>{ORDER_BADGE[o.status][1]}</Badge>
                       </div>

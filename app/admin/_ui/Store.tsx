@@ -252,7 +252,7 @@ export function AdminProvider({ initial, role, children }: { initial: AdminState
       seen.current.orders.add(o.id);
       if (o.status !== "new") continue;
       ring = true;
-      toast({ kind: "order", title: `New order #${o.no} · ${whoIs(o)}`, body: itemsText(o), href: "/admin" });
+      toast({ kind: "order", title: `New order #${o.no}${o.tableNo ? ` · Table ${o.tableNo}` : ""} · ${whoIs(o)}`, body: itemsText(o), href: "/admin" });
     }
     for (const x of s.sessions) {
       if (!x.billRequestedAt || x.status !== "open" || seen.current.bills.has(x.id)) continue;

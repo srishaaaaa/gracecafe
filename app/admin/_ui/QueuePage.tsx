@@ -19,7 +19,7 @@ function Ticket({ o, now, onMove }: { o: Order; now: number; onMove: (next: Orde
         <span className={cx("adm-num grid h-11 min-w-11 shrink-0 place-items-center rounded-xl px-2 text-[15px] font-extrabold", isNew ? "bg-red-600 text-white" : "bg-amber-100 text-amber-900")}>#{o.no}</span>
         <div className="min-w-0 flex-1">
           <b className="block truncate text-[16px] font-extrabold leading-tight text-slate-900">{o.customerName || "Guest"}</b>
-          <span className="adm-num block truncate text-[12px] text-slate-500">{o.customerPhone}</span>
+          <span className="adm-num block truncate text-[12px] text-slate-500">{o.tableNo ? <b className="mr-1.5 rounded bg-slate-900 px-1.5 py-0.5 text-white">Table {o.tableNo}</b> : null}{o.customerPhone}</span>
         </div>
         <span
           className={cx("adm-num shrink-0 rounded-md px-2 py-1 text-[11px] font-bold", late ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-500")}

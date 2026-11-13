@@ -236,8 +236,18 @@ function ShopContact({ d }: { d: TabView["details"] }) {
   );
 }
 
-export default function Menu({ initial }: { initial: TabView }) {
+const TABLE_TTL = 6 * 60 * 60 * 1000;
+const NO_TABLE = { no: "", at: 0 };
+
+export default function Menu({ initial, table = "" }: { initial: TabView; table?: string }) {
   const [view, setView] = useState(initial);
+  /* The table this phone scanned. Remembered for a few hours so a reload (which drops ?table=) keeps it;
+     scanning another table's QR replaces it. */
+  const [savedTable, setSavedTable] = useStored("clc-table", NO_TABLE);
+  useEffect(() => {
+    if (table && table !== savedTable.no) setSavedTable({ no: table, at: Date.now() });
+  }, [table, savedTable.no, setSavedTable]);
+  const tableNo = table || (savedTable.no && Date.now() - savedTable.at < TABLE_TTL ? savedTable.no : "");
   const [cart, setCart] = useStored<Cart>("clc-cart", NO_CART);
   const [saved, setSaved] = useStored("clc-guest", NO_GUEST);
   /* True while this phone has a tab running, so a phone that never ordered
@@ -476,6 +486,7 @@ export default function Menu({ initial }: { initial: TabView }) {
           name: guest.name,
           phone: guest.phone,
           note: guest.note,
+          table: tableNo,
         }),
       });
       const data = await r.json();
@@ -558,6 +569,7 @@ export default function Menu({ initial }: { initial: TabView }) {
         <p className="tm-hero__hi">
           {hello}
           {tab?.name ? `, ${tab.name.split(" ")[0]}` : ""} ✺
+          {ordering && tableNo ? <b style={{ marginLeft: 8, padding: "2px 10px", borderRadius: 999, background: "rgba(0,0,0,.07)", fontSize: ".8em" }}>Table {tableNo}</b> : null}
         </p>
         <h1 className="tm-hero__t">
           What are we <em>having?</em>

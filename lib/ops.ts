@@ -255,6 +255,7 @@ async function addOrder(tx: Tx, a: Args, opts: { fromCustomer: boolean }): Promi
       note: str(a.note, 240),
       customerName: s.customerName,
       customerPhone: s.customerPhone,
+      tableNo: str(a.table, 12).replace(/[^A-Za-z0-9 -]/g, "").trim(),
       status: opts.fromCustomer ? "new" : "preparing",
       source: opts.fromCustomer ? "customer" : "counter",
       subtotal: round2(items.reduce((x, i) => x + i.price * i.qty, 0)),
@@ -429,6 +430,7 @@ export async function adminState(): Promise<AdminState> {
       upiName: st[0]?.upiName ?? "",
       upiPhone: st[0]?.upiPhone ?? "",
       upiQrMinutes: st[0]?.upiQrMinutes ?? 5,
+      tableCount: st[0]?.tableCount ?? 0,
     },
     products: prods.map((p) => ({ ...p, image: imgLink(p.id, p.updatedAt, p.image) })),
     sessions: sess,
@@ -1193,6 +1195,7 @@ export async function runOp(tx: Tx, op: string, a: Args, role: string): Promise<
           patch.upiPhone = v;
         }
         if (a.upiQrMinutes !== undefined) patch.upiQrMinutes = int(a.upiQrMinutes, 1, 30, 5);
+        if (a.tableCount !== undefined) patch.tableCount = int(a.tableCount, 0, 200, 0);
         if (a.ownerName !== undefined) patch.ownerName = str(a.ownerName, 80);
         if (a.location !== undefined) patch.location = str(a.location, 120);
         for (const k of ["address", "address2"] as const) {
