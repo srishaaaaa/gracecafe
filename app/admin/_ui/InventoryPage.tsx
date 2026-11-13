@@ -833,17 +833,19 @@ export default function InventoryPage() {
                         </td>
                         <td className={cx("adm-num px-3 py-2 text-right font-semibold", p.stock !== null && p.stock <= 0 ? "text-red-600" : p.stock !== null && p.stock <= p.lowAt ? "text-amber-600" : "text-slate-700")}>{p.stock === null ? <span className="text-slate-400">Not tracked</span> : p.stock}</td>
                         <td className="px-3 py-2 text-right">
-                          <input
-                            className={cx(inputCls, "ml-auto h-9 w-24 text-right")}
-                            type="number"
-                            min={0}
-                            step={1}
-                            inputMode="numeric"
-                            value={raw}
-                            placeholder={p.stock === null ? "Track…" : String(p.stock)}
-                            onChange={(e) => setBulk({ ...(bulk ?? {}), [p.id]: e.target.value })}
-                            aria-label={`New stock for ${p.name}`}
-                          />
+                          <div className="ml-auto w-24">
+                            <input
+                              className={cx(inputCls, "h-9 w-full px-2.5 text-right")}
+                              type="number"
+                              min={0}
+                              step={1}
+                              inputMode="numeric"
+                              value={raw}
+                              placeholder={p.stock === null ? "Track…" : String(p.stock)}
+                              onChange={(e) => setBulk({ ...(bulk ?? {}), [p.id]: e.target.value })}
+                              aria-label={`New stock for ${p.name}`}
+                            />
+                          </div>
                         </td>
                         <td className={cx("adm-num px-3 py-2 text-right font-bold", diff === null ? "text-slate-300" : diff > 0 ? "text-emerald-700" : diff < 0 ? "text-red-600" : "text-slate-400")}>{diff === null ? (has && p.stock === null ? "tracking on" : "—") : diff > 0 ? `+${diff}` : diff}</td>
                       </tr>
