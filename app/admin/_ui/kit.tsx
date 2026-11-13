@@ -176,7 +176,7 @@ export const WaIcon = ({ size = 18 }: { size?: number }) => (
 
 /* ---------------- layout ---------------- */
 export function Page({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-[22px] bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,.06),0_8px_24px_-12px_rgba(15,23,42,.1)] sm:p-6 adm-in">{children}</div>;
+  return <div className="min-w-0 max-w-full rounded-[22px] bg-white p-4 shadow-[0_1px_3px_rgba(15,23,42,.06),0_8px_24px_-12px_rgba(15,23,42,.1)] sm:p-6 adm-in">{children}</div>;
 }
 
 export function PageHead({ title, sub, right, bar }: { title: string; sub?: React.ReactNode; right?: React.ReactNode; bar?: boolean }) {
@@ -193,7 +193,7 @@ export function PageHead({ title, sub, right, bar }: { title: string; sub?: Reac
 
 export function Card({ children, className, title, right }: { children: React.ReactNode; className?: string; title?: React.ReactNode; right?: React.ReactNode }) {
   return (
-    <section className={cx("rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_2px_10px_-2px_rgba(15,23,42,.08)] sm:p-5", className)}>
+    <section className={cx("min-w-0 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_2px_10px_-2px_rgba(15,23,42,.08)] sm:p-5", className)}>
       {(title || right) && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           {title && <h2 className="text-[14px] font-bold text-slate-800">{title}</h2>}

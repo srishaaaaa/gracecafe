@@ -625,7 +625,7 @@ export default function AnalyticsPage() {
                 {!today.length && <p className="py-14 text-center text-[14px] italic text-slate-400">No transactions found for today.</p>}
               </div>
             </Card>
-            <div className="space-y-5">
+            <div className="min-w-0 space-y-5">
               <Card title={<span className="text-[14px] uppercase tracking-[0.14em] text-slate-900">Live right now</span>}>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl bg-slate-50 p-3">
@@ -657,7 +657,7 @@ export default function AnalyticsPage() {
 
       {/* ============ COUPONS ============ */}
       {tab === "coupons" && (
-        <div className="adm-in grid gap-5 xl:grid-cols-[minmax(300px,380px)_1fr]">
+        <div className="adm-in grid grid-cols-1 gap-5 xl:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]">
           <Card title="Discount Summary">
             <div className="space-y-4">
               {[
